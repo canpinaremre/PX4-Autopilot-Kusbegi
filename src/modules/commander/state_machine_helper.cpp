@@ -301,6 +301,7 @@ main_state_transition(const vehicle_status_s &status, const main_state_t new_mai
 
 	case commander_state_s::MAIN_STATE_AUTO_FOLLOW_TARGET:
 	case commander_state_s::MAIN_STATE_ORBIT:
+	case commander_state_s::MAIN_STATE_KUSBEGI:
 
 		/* Follow and orbit only implemented for multicopter */
 		if (status.vehicle_type == vehicle_status_s::VEHICLE_TYPE_ROTARY_WING) {
@@ -630,6 +631,12 @@ bool set_nav_state(vehicle_status_s *status, actuator_armed_s *armed, commander_
 			// no failsafe, RC is not mandatory for orbit
 			status->nav_state = vehicle_status_s::NAVIGATION_STATE_ORBIT;
 		}
+
+		break;
+
+	case commander_state_s::MAIN_STATE_KUSBEGI:
+
+		status->nav_state = vehicle_status_s::NAVIGATION_STATE_KUSBEGI;
 
 		break;
 

@@ -771,6 +771,16 @@ MulticopterPositionControl::start_flight_task()
 		}
 	}
 
+	// Kusbegi Flight Task
+	if(_vehicle_status.nav_state == vehicle_status_s::NAVIGATION_STATE_KUSBEGI){
+		should_disable_task = false;
+		FlightTaskError error = _flight_tasks.switchTask(FlightTaskIndex::Kusbegi);
+		if (error != FlightTaskError::NoError) {
+			PX4_WARN("Kusbegi activation failed with error: %s", _flight_tasks.errorToString(error));
+		}
+
+	}
+
 	// Auto-follow me
 	if (_vehicle_status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_FOLLOW_TARGET) {
 		should_disable_task = false;

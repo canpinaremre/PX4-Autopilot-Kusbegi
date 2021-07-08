@@ -63,6 +63,7 @@ list(APPEND flight_tasks_all
 	Failsafe
 	Descend
 	Transition
+	Kusbegi
 	${flight_tasks_to_add}
 )
 

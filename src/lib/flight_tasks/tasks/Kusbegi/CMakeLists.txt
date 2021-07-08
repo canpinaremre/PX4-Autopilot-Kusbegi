@@ -1,0 +1,5 @@
+px4_add_library(FlightTaskKusbegi
+	FlightTaskKusbegi.cpp
+)
+target_link_libraries(FlightTaskKusbegi PUBLIC FlightTask)
+target_include_directories(FlightTaskKusbegi PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

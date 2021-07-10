@@ -1,0 +1,8 @@
+R: 4kusbegi 10000 10000 10000 0
+
+Failsafe outputs
+The following outputs are set to their disarmed value
+during normal operation and to their failsafe falue in case
+of flight termination.
+Z:
+Z:

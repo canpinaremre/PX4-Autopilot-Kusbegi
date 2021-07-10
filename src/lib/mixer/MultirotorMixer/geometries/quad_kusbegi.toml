@@ -1,0 +1,29 @@
+# Kusbegi Quadcopter in custom configuration Forward-Right-Down
+
+[info]
+key = "4kusbegi"
+description = "Kusbegi Quadcopter in custom configuration"
+
+[rotor_default]
+direction = "CW"
+axis      = [0.0, 0.0, -1.0]
+Ct        = 1.0
+Cm        = 0.05
+
+[[rotors]]
+name      = "right"
+position  = [7.5, 35.0, 0.0]
+direction = "CCW"
+
+[[rotors]]
+name      = "left"
+position  = [-7.5, -35.0, 0.0]
+direction = "CCW"
+
+[[rotors]]
+name     = "front"
+position = [35.0, -7.5, 0.0]
+
+[[rotors]]
+name     = "rear"
+position = [-35.0, 7.5, 0.0]

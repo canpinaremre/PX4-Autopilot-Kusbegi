@@ -1032,14 +1032,20 @@ Commander::handle_command(vehicle_status_s *status_local, const vehicle_command_
 
 	case vehicle_command_s::VEHICLE_CMD_DO_KUSBEGI:
 
-		// Switch to kusbegi state and let the kusbegi task handle the command further
-		if (TRANSITION_DENIED != main_state_transition(*status_local, commander_state_s::MAIN_STATE_KUSBEGI, status_flags,
-				&_internal_state)) {
-			cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED;
+		//Copy command long to kusbegi_mission
 
-		} else {
-			cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED;
-		}
+		_ksb_cmd.timestamp = hrt_absolute_time();
+		_ksb_cmd.publisher = kusbegi_mission_s::MODULE_COMMANDER;
+		_ksb_cmd.param1 = cmd.param1;
+		_ksb_cmd.param2 = cmd.param2;
+		_ksb_cmd.param3 = cmd.param3;
+		_ksb_cmd.param4 = cmd.param4;
+		_ksb_cmd.param5 = cmd.param5;
+		_ksb_cmd.param6 = cmd.param6;
+		_ksb_cmd.param7 = cmd.param7;
+
+		//Let the kusbegi module handle
+		_kusbegi_mission_pub.publish(_ksb_cmd);
 
 		break;
 

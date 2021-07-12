@@ -21,6 +21,7 @@ px4_add_board(
 		tone_alarm
 		#uavcan
 	MODULES
+		kusbegi_control
 		airship_att_control
 		airspeed_selector
 		attitude_estimator_q

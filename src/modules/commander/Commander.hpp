@@ -81,6 +81,7 @@
 #include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vtol_vehicle_status.h>
+#include <uORB/topics/kusbegi_mission.h>
 
 using math::constrain;
 using systemlib::Hysteresis;
@@ -381,6 +382,7 @@ private:
 	vehicle_land_detected_s	_land_detector{};
 	safety_s		_safety{};
 	vtol_vehicle_status_s	_vtol_status{};
+	kusbegi_mission_s 	_ksb_cmd{};
 
 	// Subscriptions
 	uORB::Subscription					_actuator_controls_sub{ORB_ID_VEHICLE_ATTITUDE_CONTROLS};
@@ -431,6 +433,7 @@ private:
 	uORB::Publication<vehicle_status_flags_s>		_vehicle_status_flags_pub{ORB_ID(vehicle_status_flags)};
 	uORB::Publication<vehicle_status_s>			_status_pub{ORB_ID(vehicle_status)};
 	uORB::Publication<mission_s>				_mission_pub{ORB_ID(mission)};
+	uORB::Publication<kusbegi_mission_s>			_kusbegi_mission_pub{ORB_ID(kusbegi_mission)};
 
 	uORB::PublicationData<home_position_s>			_home_pub{ORB_ID(home_position)};
 

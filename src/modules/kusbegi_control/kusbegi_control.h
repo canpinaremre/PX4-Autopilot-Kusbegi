@@ -21,9 +21,6 @@ public:
 	KusbegiControl();
 	~KusbegiControl() override;
 
-	bool get_mcu_message();
-	bool send_message_to_mcu();
-
 	static int task_spawn(int argc, char *argv[]);
 
 	/** @see ModuleBase */
@@ -37,6 +34,7 @@ public:
 
 	void start();
 	int print_status() override;
+	void run_kusbegi();
 private:
 
 	/** Do a compute and schedule the next cycle. */
@@ -54,6 +52,13 @@ private:
 	uORB::Subscription					_kusbegi_target_sub{ORB_ID(kusbegi_target)};
 	uORB::Subscription					_kusbegi_mission_sub{ORB_ID(kusbegi_mission)};
 
+	DEFINE_PARAMETERS(
+		(ParamFloat<px4::params::NAV_FW_ALT_RAD>)
+		_required_state,	/**< Required state from mcu */
+		(ParamFloat<px4::params::NAV_FW_ALTL_RAD>)
+		_param_custom	/**< Custom param for future use*/
+	)
+
 	enum flightPhase {
 		IDLE = 0,
 		TAKEOFF = 1,
@@ -68,8 +73,33 @@ private:
 		CMD_ERROR,
 		NO_CMD
 	};
+
+	enum mcuSetState{
+		MCU_STATE_IDLE,
+		MCU_STATE_RED_VALUE,
+		MCU_STATE_RED_POSITION,
+		MCU_STATE_POOL,
+
+		MCU_STATE_WP1,
+		MCU_STATE_WP2,
+		MCU_STATE_WP3,
+		MCU_STATE_WP4,
+		MCU_STATE_WP5,
+		MCU_STATE_WP6,
+		MCU_STATE_WP7,
+		MCU_STATE_WP8,
+		MCU_STATE_WP9,
+		MCU_STATE_WP10,
+		MCU_STATE_WP11,
+		MCU_STATE_WP12,
+		MCU_STATE_WP13,
+		MCU_STATE_WP14,
+	};
+
 	commandResult _cmd_result{NO_CMD};
 	flightPhase _phase{flightPhase::IDLE};
 	int mytest{0};
 
+	bool get_mcu_message();
+	bool send_message_to_mcu(mcuSetState state,float fparam);
 };

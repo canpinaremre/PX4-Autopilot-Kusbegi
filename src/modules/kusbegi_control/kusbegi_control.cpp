@@ -61,11 +61,17 @@ void KusbegiControl::start()
  */
 void KusbegiControl::Run()
 {
+	run_kusbegi();
+}
+
+void KusbegiControl::run_kusbegi(){
+
 	if(get_mcu_message()){
 		mytest = (int)_cmd_mission_s.param2;
 		print_status();
 	}
 
+	send_message_to_mcu(MCU_STATE_WP12,(float)(mytest + 5));
 
 	switch (_phase)
 	{
@@ -81,7 +87,6 @@ void KusbegiControl::Run()
 		PX4_WARN("UNKNOWN STATE: Going failsafe");
 		break;
 	}
-
 }
 
 /**
@@ -111,11 +116,20 @@ bool KusbegiControl::get_mcu_message(){
  * @return true on success
  * @return false else
  */
-bool KusbegiControl::send_message_to_mcu(){
-	//Orbit gibi kullanılmayan bir modül mesajları üzerinden
-	//yada kullanılmayan bir parametre üzerinden veri basılabilir.
+bool KusbegiControl::send_message_to_mcu(mcuSetState state,float fparam){
+	float fstate = (float) state;
+	bool ret =false;
 
-return true;
+	updateParams();
+
+	_required_state.set(fstate);
+	_param_custom.set(fparam);
+
+	ret = (_required_state.commit() && _param_custom.commit());
+
+	updateParams();
+
+return ret;
 }
 
 
@@ -123,7 +137,6 @@ int KusbegiControl::print_status(){
 
 	PX4_INFO("Status test: %d",mytest);
 	PX4_INFO("Cmd result: %d",_cmd_result);
-	PX4_INFO("Test Commit");
 	return 0;
 }
 

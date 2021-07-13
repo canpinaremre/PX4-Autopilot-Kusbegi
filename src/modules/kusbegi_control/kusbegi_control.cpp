@@ -123,6 +123,7 @@ int KusbegiControl::print_status(){
 
 	PX4_INFO("Status test: %d",mytest);
 	PX4_INFO("Cmd result: %d",_cmd_result);
+	PX4_INFO("Test Commit");
 	return 0;
 }
 

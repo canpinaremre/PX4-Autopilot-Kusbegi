@@ -63,15 +63,49 @@ void KusbegiControl::Run()
 {
 	run_kusbegi();
 }
+void KusbegiControl::handle_mcu_message(){
+
+	switch ((int)_cmd_mission_s.param1)
+	{
+		case MCU_CMD_TAKEOFF:
+			PX4_INFO("Taking off!!");
+			break;
+		case MCU_CMD_LAND:
+			PX4_INFO("Landing!!!");
+			break;
+		default:
+			break;
+	}
+}
 
 void KusbegiControl::run_kusbegi(){
 
-	if(get_mcu_message()){
-		mytest = (int)_cmd_mission_s.param2;
-		print_status();
+	get_mcu_message();
+
+	switch (_cmd_result)
+	{
+	case CMD_OK:
+		handle_mcu_message();
+		break;
+	case CMD_ERROR:
+		_cmd_err_cnt++;
+		if(_cmd_err_cnt >= MAX_CMD_ERR_CNT){
+			_phase = FAIL_SAFE;
+			_failsafe_reason = FS_CMD_ERR;
+		}
+		break;
+	case NO_CMD:
+		if((hrt_absolute_time() - _last_cmd_time) > CMD_TIMEOUT){
+			if(_phase == IDLE){
+				_phase = FAIL_SAFE;
+				_failsafe_reason = FS_CMD_TIMEOUT;
+			}
+		}
+		break;
+	default:
+		break;
 	}
 
-	send_message_to_mcu(MCU_STATE_WP12,(float)(mytest + 5));
 
 	switch (_phase)
 	{
@@ -79,9 +113,12 @@ void KusbegiControl::run_kusbegi(){
 		/* code */
 		break;
 	case TAKEOFF:
-		/* code */
-		break;
 
+
+		break;
+	case TRANSITION:
+
+		break;
 	default:
 		_phase = FAIL_SAFE;
 		PX4_WARN("UNKNOWN STATE: Going failsafe");
@@ -106,6 +143,7 @@ bool KusbegiControl::get_mcu_message(){
 		_cmd_result =CMD_OK;
 		return true;
 	}
+	_last_cmd_time = hrt_absolute_time();
 	_cmd_result = NO_CMD;
 	return false;
 }
@@ -153,6 +191,17 @@ Kusbegi control module
 )DESCR_STR");
 	PRINT_MODULE_USAGE_DEFAULT_COMMANDS();
 	return 0;
+}
+void KusbegiControl::start_mission(char *argv[]){
+
+}
+
+void KusbegiControl::stop_mission(){
+
+}
+
+void KusbegiControl::status_mission(){
+
 }
 
 extern "C" __EXPORT int kusbegi_control_main(int argc, char *argv[])

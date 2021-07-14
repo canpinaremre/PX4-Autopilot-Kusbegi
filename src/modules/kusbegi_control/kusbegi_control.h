@@ -15,6 +15,11 @@
 #include <uORB/Subscription.hpp>
 
 
+
+using namespace time_literals;
+
+#define MAX_CMD_ERR_CNT 3
+#define CMD_TIMEOUT 15_s
 class KusbegiControl : public ModuleBase<KusbegiControl>, public ModuleParams, public px4::ScheduledWorkItem
 {
 public:
@@ -24,8 +29,7 @@ public:
 	static int task_spawn(int argc, char *argv[]);
 
 	/** @see ModuleBase */
-	static int custom_command(int argc, char *argv[])
-	{
+	static int custom_command(int argc, char *argv[]){
 		return print_usage("unknown command");
 	}
 
@@ -35,8 +39,11 @@ public:
 	void start();
 	int print_status() override;
 	void run_kusbegi();
-private:
 
+private:
+	void start_mission(char *argv[]);
+	void stop_mission();
+	void status_mission();
 	/** Do a compute and schedule the next cycle. */
 	void Run() override;
 
@@ -65,13 +72,19 @@ private:
 		TO_WP = 2,
 		LAND = 3,
 		FLIGHT_TASK = 4,
-		FAIL_SAFE = 5
+		FAIL_SAFE = 5,
+		TRANSITION =6
 	};
 
 	enum commandResult{
 		CMD_OK,
 		CMD_ERROR,
 		NO_CMD
+	};
+
+	enum mcuCommand{
+		MCU_CMD_TAKEOFF = 0,
+		MCU_CMD_LAND = 1
 	};
 
 	enum mcuSetState{
@@ -96,10 +109,19 @@ private:
 		MCU_STATE_WP14,
 	};
 
+	enum failsafeReason{
+		FS_CMD_ERR,
+		FS_CMD_TIMEOUT
+	};
+	failsafeReason _failsafe_reason{};
 	commandResult _cmd_result{NO_CMD};
 	flightPhase _phase{flightPhase::IDLE};
 	int mytest{0};
+	uint64_t _last_cmd_time{hrt_absolute_time()};
+	uint32_t _cmd_err_cnt{0};
+	bool _mission_active{false};
 
 	bool get_mcu_message();
 	bool send_message_to_mcu(mcuSetState state,float fparam);
+	void handle_mcu_message();
 };

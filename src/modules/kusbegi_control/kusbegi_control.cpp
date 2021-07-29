@@ -11,7 +11,33 @@
 
 #include "kusbegi_control.h"
 using namespace time_literals;
+static bool send_vehicle_command(uint16_t cmd, float param1 = NAN, float param2 = NAN, float param3 = NAN,
+				 float param4 = NAN, float param5 = NAN, float param6 = NAN, float param7 = NAN)
+{
+	vehicle_command_s vcmd{};
 
+	vcmd.param1 = param1;
+	vcmd.param2 = param2;
+	vcmd.param3 = param3;
+	vcmd.param4 = param4;
+	vcmd.param5 = (double)param5;
+	vcmd.param6 = (double)param6;
+	vcmd.param7 = param7;
+
+	vcmd.command = cmd;
+
+	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
+	vcmd.source_system = vehicle_status_sub.get().system_id;
+	vcmd.target_system = vehicle_status_sub.get().system_id;
+	vcmd.source_component = vehicle_status_sub.get().component_id;
+	vcmd.target_component = vehicle_status_sub.get().component_id;
+
+	vcmd.timestamp = hrt_absolute_time();
+
+	uORB::PublicationQueued<vehicle_command_s> vcmd_pub{ORB_ID(vehicle_command)};
+
+	return vcmd_pub.publish(vcmd);
+}
 KusbegiControl::KusbegiControl() :
 	ModuleParams(nullptr),
 	ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::lp_default)
@@ -20,7 +46,8 @@ KusbegiControl::KusbegiControl() :
 
 KusbegiControl::~KusbegiControl()
 {
-	ScheduleClear();
+	//already cleared in Run()
+	//ScheduleClear();
 }
 
 int KusbegiControl::task_spawn(int argc, char *argv[])
@@ -61,6 +88,11 @@ void KusbegiControl::start()
  */
 void KusbegiControl::Run()
 {
+	if (should_exit()) {
+		ScheduleClear();
+		exit_and_cleanup();
+		return;
+	}
 	run_kusbegi();
 }
 void KusbegiControl::handle_mcu_message(){
@@ -68,10 +100,12 @@ void KusbegiControl::handle_mcu_message(){
 	switch ((int)_cmd_mission_s.param1)
 	{
 		case MCU_CMD_TAKEOFF:
-			PX4_INFO("Taking off!!");
+			PX4_INFO("Take off command received");
+			_phase = TAKEOFF;
+			//TODO: store the takeoff altitude
 			break;
 		case MCU_CMD_LAND:
-			PX4_INFO("Landing!!!");
+			PX4_INFO("Land command received");
 			break;
 		default:
 			break;
@@ -113,7 +147,14 @@ void KusbegiControl::run_kusbegi(){
 		/* code */
 		break;
 	case TAKEOFF:
+		//TODO: use stored take off altitude
+		//now continue with default take off altitude
 
+		//switch to takeoff mode and arm
+		send_vehicle_command(vehicle_command_s::VEHICLE_CMD_NAV_TAKEOFF);
+		send_vehicle_command(vehicle_command_s::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.f, 0.f);
+		PX4_INFO("Kusbegi - Take off!!");
+		_phase = IDLE;
 
 		break;
 	case TRANSITION:
@@ -192,16 +233,50 @@ Kusbegi control module
 	PRINT_MODULE_USAGE_DEFAULT_COMMANDS();
 	return 0;
 }
-void KusbegiControl::start_mission(char *argv[]){
-
+int KusbegiControl::start_mission(){
+	//TODO: start from argv state
+	return 0;
 }
 
-void KusbegiControl::stop_mission(){
+int KusbegiControl::stop_mission(){
 
+	return 0;
 }
 
-void KusbegiControl::status_mission(){
+int KusbegiControl::status_mission(){
 
+	return 0;
+}
+
+int KusbegiControl::test_func(){
+	_phase = TAKEOFF;
+	return 0;
+}
+
+int KusbegiControl::custom_command(int argc, char *argv[])
+{
+	const char *verb = argv[0];
+
+	if (!is_running()){
+		PX4_INFO("Not running!");
+		return PX4_ERROR;
+	}
+
+
+	if (!strcmp(verb, "test")) {
+		return _object.load()->test_func();
+	}
+	else if(!strcmp(verb, "start_mission")){
+		return _object.load()->start_mission();
+	}
+	else if(!strcmp(verb, "stop_mission")){
+		return _object.load()->stop_mission();
+	}
+	else if(!strcmp(verb, "status_mission")){
+		return _object.load()->status_mission();
+	}
+
+	return print_usage("unknown command");
 }
 
 extern "C" __EXPORT int kusbegi_control_main(int argc, char *argv[])

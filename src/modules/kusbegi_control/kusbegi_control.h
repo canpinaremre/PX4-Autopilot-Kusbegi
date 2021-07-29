@@ -10,6 +10,8 @@
 #include <uORB/topics/position_setpoint_triplet.h>
 #include <uORB/topics/kusbegi_mission.h>
 #include <uORB/topics/kusbegi_target.h>
+#include <uORB/topics/vehicle_command.h>
+#include <uORB/topics/vehicle_status.h>
 
 #include <uORB/Publication.hpp>
 #include <uORB/Subscription.hpp>
@@ -29,9 +31,7 @@ public:
 	static int task_spawn(int argc, char *argv[]);
 
 	/** @see ModuleBase */
-	static int custom_command(int argc, char *argv[]){
-		return print_usage("unknown command");
-	}
+	static int custom_command(int argc, char *argv[]);
 
 	/** @see ModuleBase */
 	static int print_usage(const char *reason = nullptr);
@@ -41,9 +41,10 @@ public:
 	void run_kusbegi();
 
 private:
-	void start_mission(char *argv[]);
-	void stop_mission();
-	void status_mission();
+	int start_mission();
+	int stop_mission();
+	int status_mission();
+	int test_func();
 	/** Do a compute and schedule the next cycle. */
 	void Run() override;
 

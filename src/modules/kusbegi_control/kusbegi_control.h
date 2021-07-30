@@ -42,6 +42,9 @@ public:
 	void run_kusbegi();
 
 private:
+	int sendSetpoint(uint8_t drive_type, float x, float y, float z);
+	int startFlightTask();
+	int takeOff();
 	int start_mission();
 	int stop_mission();
 	int status_mission();

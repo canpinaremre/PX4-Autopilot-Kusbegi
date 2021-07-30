@@ -141,38 +141,38 @@ void KusbegiControl::run_kusbegi(){
 	}
 
 
-	// switch (_phase)
-	// {
-	// case IDLE:
-	// 	//TODO:reset _kusbegi_target_s
-	// 	_kusbegi_target_s.drive_type = kusbegi_target_s::KUSBEGI_DRV_TYPE_IDLE;
-	// 	_kusbegi_target_pub.publish(_kusbegi_target_s);
-	// 	break;
-	// case TAKEOFF:
-	// 	//TODO: use stored take off altitude
-	// 	//now continue with default take off altitude
+	switch (_phase)
+	{
+	case IDLE:
+		//TODO:reset _kusbegi_target_s
+		_kusbegi_target_s.drive_type = kusbegi_target_s::KUSBEGI_DRV_TYPE_IDLE;
+		_kusbegi_target_pub.publish(_kusbegi_target_s);
+		break;
+	case TAKEOFF:
+		//TODO: use stored take off altitude
+		//now continue with default take off altitude
 
-	// 	//switch to takeoff mode and arm
-	// 	send_vehicle_command(vehicle_command_s::VEHICLE_CMD_NAV_TAKEOFF);
-	// 	send_vehicle_command(vehicle_command_s::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.f, 0.f);
-	// 	PX4_INFO("Kusbegi - Take off!!");
-	// 	_phase = IDLE;
+		//switch to takeoff mode and arm
+		send_vehicle_command(vehicle_command_s::VEHICLE_CMD_NAV_TAKEOFF);
+		send_vehicle_command(vehicle_command_s::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.f, 0.f);
+		PX4_INFO("Kusbegi - Take off!!");
+		_phase = IDLE;
 
-	// 	break;
-	// case TRANSITION:
+		break;
+	case TRANSITION:
 
-	// 	break;
-	// case SPEED_IN_FRD_F:
-	// 	_kusbegi_target_s.drive_type = kusbegi_target_s::KUSBEGI_DRV_TYPE_V;
-	// 	_kusbegi_target_s.x = 5.0f;
-	// 	_kusbegi_target_pub.publish(_kusbegi_target_s);
+		break;
+	case SPEED_IN_FRD_F:
+		_kusbegi_target_s.drive_type = kusbegi_target_s::KUSBEGI_DRV_TYPE_V;
+		_kusbegi_target_s.x = 5.0f;
+		_kusbegi_target_pub.publish(_kusbegi_target_s);
 
-	// 	break;
-	// default:
-	// 	_phase = FAIL_SAFE;
-	// 	PX4_WARN("UNKNOWN STATE: Going failsafe");
-	// 	break;
-	// }
+		break;
+	default:
+		_phase = FAIL_SAFE;
+		PX4_WARN("UNKNOWN STATE: Going failsafe");
+		break;
+	}
 }
 
 /**
@@ -243,15 +243,33 @@ Kusbegi control module
 }
 int KusbegiControl::start_mission(){
 	//TODO: start from argv state
+	takeOff();
+	//wait?!
+	startFlightTask();
+
+	return 0;
+}
+int KusbegiControl::startFlightTask(){
 	send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
 						     PX4_CUSTOM_SUB_MODE_AUTO_KUSBEGI);
-	//_phase = SPEED_IN_FRD_F;
-	_kusbegi_target_s.drive_type = kusbegi_target_s::KUSBEGI_DRV_TYPE_X;
-	_kusbegi_target_s.x = -5.0f;
-	_kusbegi_target_s.y = -1.0f;
-	_kusbegi_target_s.z = 0.0f;
+
+	return 0;
+}
+int KusbegiControl::takeOff(){
+	_phase = TAKEOFF;
+	return 0;
+
+}
+int KusbegiControl::sendSetpoint(uint8_t drive_type, float x, float y, float z){
+
+
+	_kusbegi_target_s.drive_type = drive_type;
+	_kusbegi_target_s.x = x;
+	_kusbegi_target_s.y = y;
+	_kusbegi_target_s.z = z;
 	_kusbegi_target_pub.publish(_kusbegi_target_s);
 	return 0;
+
 }
 
 int KusbegiControl::stop_mission(){

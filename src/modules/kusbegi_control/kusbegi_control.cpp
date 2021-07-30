@@ -131,7 +131,7 @@ void KusbegiControl::run_kusbegi(){
 	case NO_CMD:
 		if((hrt_absolute_time() - _last_cmd_time) > CMD_TIMEOUT){
 			if(_phase == IDLE){
-				_phase = FAIL_SAFE;
+				//TODO: _phase = FAIL_SAFE;
 				_failsafe_reason = FS_CMD_TIMEOUT;
 			}
 		}
@@ -141,30 +141,38 @@ void KusbegiControl::run_kusbegi(){
 	}
 
 
-	switch (_phase)
-	{
-	case IDLE:
-		/* code */
-		break;
-	case TAKEOFF:
-		//TODO: use stored take off altitude
-		//now continue with default take off altitude
+	// switch (_phase)
+	// {
+	// case IDLE:
+	// 	//TODO:reset _kusbegi_target_s
+	// 	_kusbegi_target_s.drive_type = kusbegi_target_s::KUSBEGI_DRV_TYPE_IDLE;
+	// 	_kusbegi_target_pub.publish(_kusbegi_target_s);
+	// 	break;
+	// case TAKEOFF:
+	// 	//TODO: use stored take off altitude
+	// 	//now continue with default take off altitude
 
-		//switch to takeoff mode and arm
-		send_vehicle_command(vehicle_command_s::VEHICLE_CMD_NAV_TAKEOFF);
-		send_vehicle_command(vehicle_command_s::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.f, 0.f);
-		PX4_INFO("Kusbegi - Take off!!");
-		_phase = IDLE;
+	// 	//switch to takeoff mode and arm
+	// 	send_vehicle_command(vehicle_command_s::VEHICLE_CMD_NAV_TAKEOFF);
+	// 	send_vehicle_command(vehicle_command_s::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.f, 0.f);
+	// 	PX4_INFO("Kusbegi - Take off!!");
+	// 	_phase = IDLE;
 
-		break;
-	case TRANSITION:
+	// 	break;
+	// case TRANSITION:
 
-		break;
-	default:
-		_phase = FAIL_SAFE;
-		PX4_WARN("UNKNOWN STATE: Going failsafe");
-		break;
-	}
+	// 	break;
+	// case SPEED_IN_FRD_F:
+	// 	_kusbegi_target_s.drive_type = kusbegi_target_s::KUSBEGI_DRV_TYPE_V;
+	// 	_kusbegi_target_s.x = 5.0f;
+	// 	_kusbegi_target_pub.publish(_kusbegi_target_s);
+
+	// 	break;
+	// default:
+	// 	_phase = FAIL_SAFE;
+	// 	PX4_WARN("UNKNOWN STATE: Going failsafe");
+	// 	break;
+	// }
 }
 
 /**
@@ -235,21 +243,37 @@ Kusbegi control module
 }
 int KusbegiControl::start_mission(){
 	//TODO: start from argv state
+	send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
+						     PX4_CUSTOM_SUB_MODE_AUTO_KUSBEGI);
+	//_phase = SPEED_IN_FRD_F;
+	_kusbegi_target_s.drive_type = kusbegi_target_s::KUSBEGI_DRV_TYPE_X;
+	_kusbegi_target_s.x = -5.0f;
+	_kusbegi_target_s.y = -1.0f;
+	_kusbegi_target_s.z = 0.0f;
+	_kusbegi_target_pub.publish(_kusbegi_target_s);
 	return 0;
 }
 
 int KusbegiControl::stop_mission(){
-
+	_phase = IDLE;
 	return 0;
 }
 
 int KusbegiControl::status_mission(){
+	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
+	uint8_t state_nav = vehicle_status_sub.get().nav_state;
+	PX4_INFO("Nav state: %d",state_nav);
 
 	return 0;
 }
 
 int KusbegiControl::test_func(){
 	_phase = TAKEOFF;
+
+	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
+	uint8_t state_nav = vehicle_status_sub.get().nav_state;
+	PX4_INFO("Nav state: %d",state_nav);
+
 	return 0;
 }
 

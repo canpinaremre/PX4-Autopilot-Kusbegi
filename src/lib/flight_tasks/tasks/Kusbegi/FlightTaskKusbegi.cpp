@@ -1,6 +1,8 @@
 #include "FlightTaskKusbegi.hpp"
 
 using namespace matrix;
+using namespace time_literals;
+
 
 void FlightTaskKusbegi::_bodyToNedFrame(float xBody,float yBody,float yawBody)
 {
@@ -24,15 +26,26 @@ bool FlightTaskKusbegi::activate(const vehicle_local_position_setpoint_s &last_s
 		return ret;
 	}
 
+	for(int i = 0; i < 3; i++)
+	{
+		_position_setpoint(i) = _position(i);
+		_local[i] = _position(i);
+		_takeoff_pos[i] = _position(i);
+		_target_v[i] = 0.0f;
+		_ksb_v[i] = 0.0f;
 
-	_position_setpoint(0) = _position(0);
-	_position_setpoint(1) = _position(1);
-	_position_setpoint(2) = _position(2);
+	}
+	//TODO: get from params
+	_ksb_a = 0.1f;
+	_max_target_speed = 6.0f;
 	_yaw_setpoint = _yaw;
+	_local_yaw = _yaw;
 
-	_kusbegi_mission_s.timestamp = hrt_absolute_time();
-	_kusbegi_mission_s.kusbegi_state = 2;
-	_kusbegi_mission_pub.publish(_kusbegi_mission_s);
+	_resetSpeed();
+
+	// _kusbegi_mission_s.timestamp = hrt_absolute_time();
+	// _kusbegi_mission_s.kusbegi_state = 2;
+	// _kusbegi_mission_pub.publish(_kusbegi_mission_s);
 
 	return ret;
 
@@ -42,7 +55,131 @@ bool FlightTaskKusbegi::activate(const vehicle_local_position_setpoint_s &last_s
 bool FlightTaskKusbegi::update()
 {
 
+	if(_kusbegi_target_sub.updated()){
+		_kusbegi_target_sub.update(&_kusbegi_target_s);
 
+		switch (_kusbegi_target_s.drive_type)
+		{
+		case kusbegi_target_s::KUSBEGI_DRV_TYPE_IDLE:
+			_phase = IDLE;
+			break;
+		case kusbegi_target_s::KUSBEGI_DRV_TYPE_V:
+			_phase = DRV_TYPE_V;
+			break;
+		case kusbegi_target_s::KUSBEGI_DRV_TYPE_X:
+			_offsetApplied[0] = _local[0] + _kusbegi_target_s.x;
+			_offsetApplied[1] = _local[1] + _kusbegi_target_s.y;
+			_offsetApplied[2] = _local[2] + _kusbegi_target_s.z;
+			_offsetSpeed[0] = 0.0f;
+			_offsetSpeed[1] = 0.0f;
+			_offsetSpeed[2] = 0.0f;
+			_phase = DRV_TYPE_X;
+			break;
+		default:
+			break;
+		}
+	}
+
+
+
+	switch (_phase)
+	{
+	case IDLE:
+		/* do nothing */
+		_resetSpeed();
+		break;
+	case DRV_TYPE_V:
+			_target_v[0] = _kusbegi_target_s.x;
+			_target_v[1] = _kusbegi_target_s.y;
+			_target_v[2] = _kusbegi_target_s.z;
+		break;
+	case DRV_TYPE_X:
+			_gotoOffset();
+	default:
+		break;
+	}
+
+	_calculateSpeedFromTargetSpeed();
+	_calculatePositionFromSpeed();
+	_sendPosition();
+	_yaw_setpoint = _local_yaw;
 
 	return true;
 }
+
+void FlightTaskKusbegi::_gotoOffset()
+{
+
+
+	for(int i = 0; i < 3; i++)
+	{
+		if(_offsetSpeed[i] < 2.0f){
+			_offsetSpeed[i] += 0.06f;
+		}
+
+		if(fabsf(_offsetApplied[i] - _local[i]) < 0.05f){
+			_local[i] = _offsetApplied[i];
+			continue;
+		}
+		if(fabsf(_offsetApplied[i] - _local[i]) < 2.05f){
+			_offsetSpeed[i] -= 0.12f;
+			if(_offsetSpeed[i] < 0.0f){
+				_offsetSpeed[i] = 0.08;
+			}
+		}
+
+		if(_offsetApplied[i] > _local[i])
+		{
+			_local[i] += _offsetSpeed[i] * _deltatime;
+		}
+		else if(_offsetApplied[i] < _local[i])
+		{
+			_local[i] -= _offsetSpeed[i] * _deltatime;
+		}
+	}
+
+}
+
+void FlightTaskKusbegi::_calculateSpeedFromTargetSpeed()
+{
+	for(int i = 0; i < 3; i++)
+	{
+		if(fabsf(_target_v[i] - _ksb_v[i]) < (_ksb_a * 2.0f))
+		{
+			continue;
+		}
+
+		if(_target_v[i] > _ksb_v[i]){
+			_ksb_v[i] += _ksb_a;
+		}
+		else if(_target_v[i] < _ksb_v[i]){
+			_ksb_v[i] -= _ksb_a;
+		}
+
+	}
+}
+void FlightTaskKusbegi::_calculatePositionFromSpeed()
+{
+	for(int i = 0; i < 3; i++)
+	{
+		if(fabsf(_ksb_v[i]) < (_ksb_a * 0.9f)){
+			continue;
+		}
+		_local[i] += _ksb_v[i] * _deltatime;
+	}
+}
+void FlightTaskKusbegi::_sendPosition()
+{
+	for(int i = 0; i < 3; i++)
+	{
+		_position_setpoint(i) = _local[i];
+	}
+}
+void FlightTaskKusbegi::_resetSpeed(){
+
+	for(int i = 0; i < 3; i++)
+	{
+		_target_v[i] = 0;
+	}
+}
+

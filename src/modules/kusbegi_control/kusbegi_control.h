@@ -6,6 +6,7 @@
 #include <px4_platform_common/module.h>
 #include <px4_platform_common/module_params.h>
 #include <px4_platform_common/px4_work_queue/ScheduledWorkItem.hpp>
+#include <commander/px4_custom_mode.h>
 
 #include <uORB/topics/position_setpoint_triplet.h>
 #include <uORB/topics/kusbegi_mission.h>
@@ -74,7 +75,8 @@ private:
 		LAND = 3,
 		FLIGHT_TASK = 4,
 		FAIL_SAFE = 5,
-		TRANSITION =6
+		TRANSITION =6,
+		SPEED_IN_FRD_F = 7
 	};
 
 	enum commandResult{

@@ -20,3 +20,11 @@ float32 z			# local position setpoint in m in NED
 
 uint8 taget_value
 uint8 target_confident
+
+uint8 drive_type
+
+uint8 KUSBEGI_DRV_TYPE_IDLE = 0
+uint8 KUSBEGI_DRV_TYPE_V = 1	#Speed
+uint8 KUSBEGI_DRV_TYPE_X = 2	#Meters
+uint8 KUSBEGI_DRV_TYPE_A = 3	#Acc
+uint8 KUSBEGI_DRV_TYPE_C = 4	#Coordinates

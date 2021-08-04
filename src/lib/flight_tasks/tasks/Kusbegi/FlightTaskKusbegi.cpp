@@ -67,6 +67,7 @@ bool FlightTaskKusbegi::update()
 			_phase = DRV_TYPE_V;
 			break;
 		case kusbegi_target_s::KUSBEGI_DRV_TYPE_X:
+			_resetSPs();
 			_offsetApplied[0] = _local[0] + _kusbegi_target_s.x;
 			_offsetApplied[1] = _local[1] + _kusbegi_target_s.y;
 			_offsetApplied[2] = _local[2] + _kusbegi_target_s.z;
@@ -105,6 +106,20 @@ bool FlightTaskKusbegi::update()
 	_yaw_setpoint = _local_yaw;
 
 	return true;
+}
+
+void FlightTaskKusbegi::_resetSPs(){
+
+	for(int i = 0; i < 3; i++)
+	{
+		_position_setpoint(i) = _position(i);
+		_local[i] = _position(i);
+		_takeoff_pos[i] = _position(i);
+		_target_v[i] = 0.0f;
+		_ksb_v[i] = 0.0f;
+
+	}
+
 }
 
 void FlightTaskKusbegi::_gotoOffset()

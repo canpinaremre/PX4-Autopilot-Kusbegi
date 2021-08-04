@@ -20,8 +20,8 @@ static bool send_vehicle_command(uint16_t cmd, float param1 = NAN, float param2 
 	vcmd.param2 = param2;
 	vcmd.param3 = param3;
 	vcmd.param4 = param4;
-	vcmd.param5 = (double)param5;
-	vcmd.param6 = (double)param6;
+	vcmd.param5 = param5;
+	vcmd.param6 = param6;
 	vcmd.param7 = param7;
 
 	vcmd.command = cmd;
@@ -38,6 +38,34 @@ static bool send_vehicle_command(uint16_t cmd, float param1 = NAN, float param2 
 
 	return vcmd_pub.publish(vcmd);
 }
+
+void KusbegiControl::do_reposition(float lat,float lon){
+	vehicle_command_s vcmd{};
+
+	vcmd.param1 = -1.0f;
+	vcmd.param2 = 1.0f;
+	vcmd.param3 = 0.0f;
+	vcmd.param4 = NAN;
+	vcmd.param5 = lat;
+	vcmd.param6 = lon;
+	vcmd.param7 = 490.5f;
+
+	vcmd.command = 192;//reposition
+
+
+	vcmd.source_system = 255;
+	vcmd.target_system = 1;
+	vcmd.source_component = 190;
+	vcmd.target_component = 1;
+
+	vcmd.timestamp = hrt_absolute_time();
+
+	uORB::PublicationQueued<vehicle_command_s> vcmd_pub{ORB_ID(vehicle_command)};
+
+	vcmd_pub.publish(vcmd);
+
+}
+
 KusbegiControl::KusbegiControl() :
 	ModuleParams(nullptr),
 	ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::lp_default)
@@ -112,10 +140,30 @@ void KusbegiControl::handle_mcu_message(){
 	}
 }
 
+void KusbegiControl::get_positionSetpoint(){
+	// float trajPos[3];
+	// _local_pos_sub.updated();
+	// _local_pos_sub.copy(&_local_pos_s);
+	// trajPos[0] = _local_pos_s.x;
+	// trajPos[1] = _local_pos_s.y;
+	// trajPos[2] = _local_pos_s.z;
+	// PX4_INFO("SP X: %f",(double)trajPos[0]);
+	// PX4_INFO("SP Y: %f",(double)trajPos[1]);
+	// PX4_INFO("SP Z: %f",(double)trajPos[2]);
+
+	_global_pos_sub.updated();
+	_global_pos_sub.copy(&_global_pos_s);
+
+	PX4_INFO("Lat: %f",(double)_global_pos_s.lat);
+	PX4_INFO("Lon: %f",(double)_global_pos_s.lon);
+}
+
 void KusbegiControl::run_kusbegi(){
 
-	get_mcu_message();
+	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
+	uint8_t state_nav = vehicle_status_sub.get().nav_state;
 
+	get_mcu_message();
 	switch (_cmd_result)
 	{
 	case CMD_OK:
@@ -140,13 +188,44 @@ void KusbegiControl::run_kusbegi(){
 		break;
 	}
 
+	float lat = 47.397777f;
+	float lon = 8.545594f;
+	switch (_stage)
+	{
+	case 0:
+		/* code */
+		break;
+	case 1:
+		//reposition
+		_stage++;
+		//startFlightTask();
+		break;
+	case 2:
+		//Go straight with speed
+		usleep(2_s);
+		// send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
+		// 				     PX4_CUSTOM_SUB_MODE_AUTO_LOITER);
+		usleep(1_s);
+		do_reposition(lat,lon);
+
+		// sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_X,5.0f,0.0f,0.0f);
+		usleep(10_s);
+		get_positionSetpoint();
+		// sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_X,0.0f,5.0f,0.0f);
+		_stage++;
+		//sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_X,0.0f,0.0f,0.0f);
+		//check if reached
+
+	default:
+		break;
+	}
 
 	switch (_phase)
 	{
 	case IDLE:
 		//TODO:reset _kusbegi_target_s
-		_kusbegi_target_s.drive_type = kusbegi_target_s::KUSBEGI_DRV_TYPE_IDLE;
-		_kusbegi_target_pub.publish(_kusbegi_target_s);
+		// _kusbegi_target_s.drive_type = kusbegi_target_s::KUSBEGI_DRV_TYPE_IDLE;
+		// _kusbegi_target_pub.publish(_kusbegi_target_s);
 		break;
 	case TAKEOFF:
 		//TODO: use stored take off altitude
@@ -155,11 +234,17 @@ void KusbegiControl::run_kusbegi(){
 		//switch to takeoff mode and arm
 		send_vehicle_command(vehicle_command_s::VEHICLE_CMD_NAV_TAKEOFF);
 		send_vehicle_command(vehicle_command_s::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.f, 0.f);
+		usleep(2_s);
 		PX4_INFO("Kusbegi - Take off!!");
-		_phase = IDLE;
+		_phase = TRANSITION;
 
 		break;
 	case TRANSITION:
+		if(state_nav == vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER)
+		{
+			_phase = IDLE;
+			_stage++;
+		}
 
 		break;
 	case SPEED_IN_FRD_F:
@@ -245,11 +330,14 @@ int KusbegiControl::start_mission(){
 	//TODO: start from argv state
 	takeOff();
 	//wait?!
-	startFlightTask();
+	_stage = 0;
+
+
 
 	return 0;
 }
 int KusbegiControl::startFlightTask(){
+	PX4_INFO("Entering FlightTask Kusbegi");
 	send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
 						     PX4_CUSTOM_SUB_MODE_AUTO_KUSBEGI);
 

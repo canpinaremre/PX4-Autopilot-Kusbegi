@@ -50,6 +50,7 @@ private:
 	void _gotoOffset();
 	void _sendPosition();
 	void _resetSpeed();
+	void _resetSPs();
 
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::MPC_XY_CRUISE>) _param_mpc_xy_cruise /**< cruise speed for circle approach */

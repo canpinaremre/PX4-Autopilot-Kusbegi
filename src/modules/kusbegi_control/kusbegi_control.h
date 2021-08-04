@@ -13,6 +13,9 @@
 #include <uORB/topics/kusbegi_target.h>
 #include <uORB/topics/vehicle_command.h>
 #include <uORB/topics/vehicle_status.h>
+#include <uORB/topics/trajectory_waypoint.h>
+#include <uORB/topics/vehicle_local_position_setpoint.h>
+#include <uORB/topics/vehicle_global_position.h>
 
 #include <uORB/Publication.hpp>
 #include <uORB/Subscription.hpp>
@@ -48,12 +51,16 @@ private:
 	int start_mission();
 	int stop_mission();
 	int status_mission();
+	void get_positionSetpoint();
+	void do_reposition(float lat,float lon);
 	int test_func();
 	/** Do a compute and schedule the next cycle. */
 	void Run() override;
 
 	kusbegi_mission_s	_kusbegi_mission_s{};
 	kusbegi_target_s	_kusbegi_target_s{};
+	vehicle_local_position_setpoint_s _local_pos_s{};
+	vehicle_global_position_s 	  _global_pos_s{};
 
 	kusbegi_mission_s	_cmd_mission_s{};
 
@@ -61,6 +68,8 @@ private:
 	uORB::Publication<kusbegi_mission_s>			_kusbegi_mission_pub{ORB_ID(kusbegi_mission)};
 	uORB::Publication<kusbegi_target_s>			_kusbegi_target_pub{ORB_ID(kusbegi_target)};
 
+	uORB::Subscription					_global_pos_sub{ORB_ID(vehicle_global_position)};
+	uORB::Subscription					_local_pos_sub{ORB_ID(vehicle_local_position_setpoint)};
 	uORB::Subscription					_kusbegi_target_sub{ORB_ID(kusbegi_target)};
 	uORB::Subscription					_kusbegi_mission_sub{ORB_ID(kusbegi_mission)};
 
@@ -71,6 +80,7 @@ private:
 		_param_custom	/**< Custom param for future use*/
 	)
 
+	uint8_t _stage;
 	enum flightPhase {
 		IDLE = 0,
 		TAKEOFF = 1,

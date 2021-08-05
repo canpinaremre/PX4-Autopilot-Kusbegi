@@ -22,6 +22,8 @@
 
 #include <lib/ecl/geo/geo.h>
 
+//#include "kusbegi_mission.h"
+
 using namespace time_literals;
 
 #define MAX_CMD_ERR_CNT 3
@@ -54,6 +56,7 @@ private:
 	void get_positionSetpoint();
 	void do_reposition();
 	float get_distance_global();
+	void print_distance_global();
 	int test_func();
 	/** Do a compute and schedule the next cycle. */
 	void Run() override;

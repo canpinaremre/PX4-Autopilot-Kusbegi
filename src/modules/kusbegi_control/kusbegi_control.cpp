@@ -74,6 +74,10 @@ float KusbegiControl::get_distance_global()
 	return get_distance_to_next_waypoint((double)_global_pos_s.lat,(double)_global_pos_s.lon,
 						(double)_target_lat,(double)_target_lon);
 }
+void KusbegiControl::print_distance_global()
+{
+	PX4_INFO("Distance to global target: %f meters", static_cast<double>(get_distance_global()));
+}
 
 KusbegiControl::KusbegiControl() :
 	ModuleParams(nullptr),
@@ -197,8 +201,8 @@ void KusbegiControl::run_kusbegi(){
 		break;
 	}
 
-	_target_lat = 47.397797f;
-	_target_lon = 8.545554f;
+	_target_lat = 47.392797f;
+	_target_lon = 8.545154f;
 	switch (_stage)
 	{
 	case 0:
@@ -216,14 +220,14 @@ void KusbegiControl::run_kusbegi(){
 		// 				     PX4_CUSTOM_SUB_MODE_AUTO_LOITER);
 		usleep(1_s);
 		do_reposition();
-		PX4_INFO("Distance: %f",(double)get_distance_global());
+		print_distance_global();
 		usleep(2_s);
-		PX4_INFO("Distance: %f",(double)get_distance_global());
+		print_distance_global();
 		usleep(2_s);
-		PX4_INFO("Distance: %f",(double)get_distance_global());
+		print_distance_global();
 		// sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_X,5.0f,0.0f,0.0f);
 		usleep(10_s);
-		PX4_INFO("Distance: %f",(double)get_distance_global());
+		print_distance_global();
 		get_positionSetpoint();
 		// sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_X,0.0f,5.0f,0.0f);
 		_stage++;

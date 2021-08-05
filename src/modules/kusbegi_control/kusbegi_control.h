@@ -20,7 +20,7 @@
 #include <uORB/Publication.hpp>
 #include <uORB/Subscription.hpp>
 
-
+#include <lib/ecl/geo/geo.h>
 
 using namespace time_literals;
 
@@ -52,10 +52,14 @@ private:
 	int stop_mission();
 	int status_mission();
 	void get_positionSetpoint();
-	void do_reposition(float lat,float lon);
+	void do_reposition();
+	float get_distance_global();
 	int test_func();
 	/** Do a compute and schedule the next cycle. */
 	void Run() override;
+
+	float _target_lat;
+	float _target_lon;
 
 	kusbegi_mission_s	_kusbegi_mission_s{};
 	kusbegi_target_s	_kusbegi_target_s{};
@@ -63,7 +67,7 @@ private:
 	vehicle_global_position_s 	  _global_pos_s{};
 
 	kusbegi_mission_s	_cmd_mission_s{};
-
+	map_projection_reference_s _reference_position{}; /**< Structure used to project lat/lon setpoint into local frame. */
 
 	uORB::Publication<kusbegi_mission_s>			_kusbegi_mission_pub{ORB_ID(kusbegi_mission)};
 	uORB::Publication<kusbegi_target_s>			_kusbegi_target_pub{ORB_ID(kusbegi_target)};

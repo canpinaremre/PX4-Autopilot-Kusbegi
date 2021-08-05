@@ -39,15 +39,15 @@ static bool send_vehicle_command(uint16_t cmd, float param1 = NAN, float param2 
 	return vcmd_pub.publish(vcmd);
 }
 
-void KusbegiControl::do_reposition(float lat,float lon){
+void KusbegiControl::do_reposition(){
 	vehicle_command_s vcmd{};
 
 	vcmd.param1 = -1.0f;
 	vcmd.param2 = 1.0f;
 	vcmd.param3 = 0.0f;
 	vcmd.param4 = NAN;
-	vcmd.param5 = lat;
-	vcmd.param6 = lon;
+	vcmd.param5 = _target_lat;
+	vcmd.param6 = _target_lon;
 	vcmd.param7 = 490.5f;
 
 	vcmd.command = 192;//reposition
@@ -64,6 +64,15 @@ void KusbegiControl::do_reposition(float lat,float lon){
 
 	vcmd_pub.publish(vcmd);
 
+}
+
+float KusbegiControl::get_distance_global()
+{
+	_global_pos_sub.updated();
+	_global_pos_sub.copy(&_global_pos_s);
+
+	return get_distance_to_next_waypoint((double)_global_pos_s.lat,(double)_global_pos_s.lon,
+						(double)_target_lat,(double)_target_lon);
 }
 
 KusbegiControl::KusbegiControl() :
@@ -188,8 +197,8 @@ void KusbegiControl::run_kusbegi(){
 		break;
 	}
 
-	float lat = 47.397777f;
-	float lon = 8.545594f;
+	_target_lat = 47.397797f;
+	_target_lon = 8.545554f;
 	switch (_stage)
 	{
 	case 0:
@@ -206,10 +215,15 @@ void KusbegiControl::run_kusbegi(){
 		// send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
 		// 				     PX4_CUSTOM_SUB_MODE_AUTO_LOITER);
 		usleep(1_s);
-		do_reposition(lat,lon);
-
+		do_reposition();
+		PX4_INFO("Distance: %f",(double)get_distance_global());
+		usleep(2_s);
+		PX4_INFO("Distance: %f",(double)get_distance_global());
+		usleep(2_s);
+		PX4_INFO("Distance: %f",(double)get_distance_global());
 		// sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_X,5.0f,0.0f,0.0f);
 		usleep(10_s);
+		PX4_INFO("Distance: %f",(double)get_distance_global());
 		get_positionSetpoint();
 		// sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_X,0.0f,5.0f,0.0f);
 		_stage++;

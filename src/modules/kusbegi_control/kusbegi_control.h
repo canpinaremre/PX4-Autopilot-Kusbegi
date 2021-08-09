@@ -88,6 +88,9 @@ private:
 	)
 
 	uint8_t _stage;
+	uint8_t _wp;
+	bool _wait_stage;
+	uint64_t _timeout_time;
 	enum flightPhase {
 		IDLE = 0,
 		TAKEOFF = 1,

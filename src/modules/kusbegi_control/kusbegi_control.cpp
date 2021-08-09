@@ -201,41 +201,131 @@ void KusbegiControl::run_kusbegi(){
 		break;
 	}
 
-	_target_lat = missionList[0].lat;
-	_target_lon = missionList[0].lon;
+
 	switch (_stage)
 	{
 	case 0:
-		/* code */
+		/* Mission Not Started Yet */
 		break;
 	case 1:
-		//reposition
-		_stage++;
-		//startFlightTask();
-		break;
-	case 2:
-		//Go straight with speed
-		usleep(2_s);
-		// send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
-		// 				     PX4_CUSTOM_SUB_MODE_AUTO_LOITER);
-		for(int i = 0; i < KSB_MISSION_ITEM_COUNT;i++){
-			_target_lat = missionList[i].lat;
-			_target_lon = missionList[i].lon;
-			do_reposition();
-			while(get_distance_global() > 1.0f){
-				usleep(1_s);
-				print_distance_global();
-			}
-			PX4_INFO("Mission Next WP: %d",i);
+		//Takeoff
+		if((state_nav == vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER) && _wait_stage)
+		{
+			usleep(1_s);
+			_wait_stage = false;
+			_stage++;
+			break;
 		}
 
-		PX4_INFO("Mission Done");
+		if(!_wait_stage){
+			_wait_stage = true;
+			send_vehicle_command(vehicle_command_s::VEHICLE_CMD_NAV_TAKEOFF);
+			send_vehicle_command(vehicle_command_s::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.f, 0.f);
+			PX4_INFO("Kusbegi - Take off!!");
+			usleep(2_s);
+		}
+
+		break;
+
+	case 2:
+		//Go to pool location
+		if(!_wait_stage){
+			_wait_stage = true;
+			send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
+						     PX4_CUSTOM_SUB_MODE_AUTO_LOITER);
+			_target_lat = missionList[_wp].lat;
+			_target_lon = missionList[_wp].lon;
+			do_reposition();
+
+		}
+		else{
+			if(get_distance_global() < 1.0f){
+				_stage++;
+				_wp++;
+				_wait_stage = false;
+				PX4_INFO("Mission Next WP: %d",_wp);
+			}
+			else{
+				print_distance_global();
+			}
+		}
+		break;
+	case 3:
+		//Pass the first line (cause of rules)
+		if(!_wait_stage){
+			_wait_stage = true;
+			send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
+						     PX4_CUSTOM_SUB_MODE_AUTO_LOITER);
+			_target_lat = missionList[_wp].lat;
+			_target_lon = missionList[_wp].lon;
+			do_reposition();
+
+		}
+		else{
+			if(get_distance_global() < 1.0f){
+				_stage++;
+				_wp++;
+				_wait_stage = false;
+				PX4_INFO("Mission Next WP: %d",_wp);
+			}
+			else{
+				print_distance_global();
+			}
+		}
+		break;
+	case 4:
+		//Start of red line
+		if(!_wait_stage){
+			_wait_stage = true;
+			send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
+						     PX4_CUSTOM_SUB_MODE_AUTO_LOITER);
+			_target_lat = missionList[_wp].lat;
+			_target_lon = missionList[_wp].lon;
+			do_reposition();
+
+		}
+		else{
+			if(get_distance_global() < 1.0f){
+				_stage++;
+				_wp++;
+				_wait_stage = false;
+				PX4_INFO("Mission Next WP: %d",_wp);
+			}
+			else{
+				print_distance_global();
+			}
+		}
+		break;
+	case 5:
+		//Go with speed and detect red
+		if(!_wait_stage){
+			_wait_stage = true;
+			usleep(2_s);
+			//TODO: adjust yaw
+			startFlightTask();
+			usleep(200_ms);
+			sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_V,5.0f,0.0f,0.0f);
+			//send MCU msg to detect red
+			_timeout_time = hrt_absolute_time();
+		}
+		//get MCU red target msg
+		//handle red target msg
+		if(hrt_absolute_time() - _timeout_time > 10_s){
+			//check distance or timeout if we are out of range
+			_stage++;
+			sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_V,0.0f,0.0f,0.0f);
+			PX4_INFO("Timeout");
+		}
+
+
+		break;
+
 		// sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_V,5.0f,0.0f,0.0f);
 		// usleep(10_s);
 		// print_distance_global();
 		// get_positionSetpoint();
 		// sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_X,0.0f,5.0f,0.0f);
-		_stage++;
+
 		//sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_X,0.0f,0.0f,0.0f);
 		//check if reached
 
@@ -255,30 +345,30 @@ void KusbegiControl::run_kusbegi(){
 		//now continue with default take off altitude
 
 		//switch to takeoff mode and arm
-		send_vehicle_command(vehicle_command_s::VEHICLE_CMD_NAV_TAKEOFF);
-		send_vehicle_command(vehicle_command_s::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.f, 0.f);
-		usleep(2_s);
-		PX4_INFO("Kusbegi - Take off!!");
-		_phase = TRANSITION;
+		// send_vehicle_command(vehicle_command_s::VEHICLE_CMD_NAV_TAKEOFF);
+		// send_vehicle_command(vehicle_command_s::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.f, 0.f);
+		// usleep(2_s);
+		// PX4_INFO("Kusbegi - Take off!!");
+		//_phase = TRANSITION;
 
 		break;
 	case TRANSITION:
 		if(state_nav == vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER)
 		{
 			_phase = IDLE;
-			_stage++;
+			// _stage++;
 		}
 
 		break;
 	case SPEED_IN_FRD_F:
-		_kusbegi_target_s.drive_type = kusbegi_target_s::KUSBEGI_DRV_TYPE_V;
-		_kusbegi_target_s.x = 5.0f;
-		_kusbegi_target_pub.publish(_kusbegi_target_s);
+		// _kusbegi_target_s.drive_type = kusbegi_target_s::KUSBEGI_DRV_TYPE_V;
+		// _kusbegi_target_s.x = 5.0f;
+		// _kusbegi_target_pub.publish(_kusbegi_target_s);
 
 		break;
 	default:
-		_phase = FAIL_SAFE;
-		PX4_WARN("UNKNOWN STATE: Going failsafe");
+		// _phase = FAIL_SAFE;
+		// PX4_WARN("UNKNOWN STATE: Going failsafe");
 		break;
 	}
 }
@@ -350,10 +440,12 @@ Kusbegi control module
 	return 0;
 }
 int KusbegiControl::start_mission(){
-	//TODO: start from argv state
-	takeOff();
-	//wait?!
-	_stage = 0;
+	//TODO: start from argv stage
+
+	//stage 1 is takeoff
+	_stage = 1;
+	_wp = 0;
+	_wait_stage = false;
 
 
 

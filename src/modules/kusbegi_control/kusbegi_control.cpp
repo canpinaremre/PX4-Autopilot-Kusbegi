@@ -70,7 +70,7 @@ float KusbegiControl::get_distance_global()
 {
 	_global_pos_sub.updated();
 	_global_pos_sub.copy(&_global_pos_s);
-
+	//TODO: make c casts static_cast
 	return get_distance_to_next_waypoint((double)_global_pos_s.lat,(double)_global_pos_s.lon,
 						(double)_target_lat,(double)_target_lon);
 }
@@ -201,8 +201,8 @@ void KusbegiControl::run_kusbegi(){
 		break;
 	}
 
-	_target_lat = 47.392797f;
-	_target_lon = 8.545154f;
+	_target_lat = missionList[0].lat;
+	_target_lon = missionList[0].lon;
 	switch (_stage)
 	{
 	case 0:
@@ -218,17 +218,22 @@ void KusbegiControl::run_kusbegi(){
 		usleep(2_s);
 		// send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
 		// 				     PX4_CUSTOM_SUB_MODE_AUTO_LOITER);
-		usleep(1_s);
-		do_reposition();
-		print_distance_global();
-		usleep(2_s);
-		print_distance_global();
-		usleep(2_s);
-		print_distance_global();
-		// sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_X,5.0f,0.0f,0.0f);
-		usleep(10_s);
-		print_distance_global();
-		get_positionSetpoint();
+		for(int i = 0; i < KSB_MISSION_ITEM_COUNT;i++){
+			_target_lat = missionList[i].lat;
+			_target_lon = missionList[i].lon;
+			do_reposition();
+			while(get_distance_global() > 1.0f){
+				usleep(1_s);
+				print_distance_global();
+			}
+			PX4_INFO("Mission Next WP: %d",i);
+		}
+
+		PX4_INFO("Mission Done");
+		// sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_V,5.0f,0.0f,0.0f);
+		// usleep(10_s);
+		// print_distance_global();
+		// get_positionSetpoint();
 		// sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_X,0.0f,5.0f,0.0f);
 		_stage++;
 		//sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_X,0.0f,0.0f,0.0f);
@@ -387,6 +392,7 @@ int KusbegiControl::status_mission(){
 	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
 	uint8_t state_nav = vehicle_status_sub.get().nav_state;
 	PX4_INFO("Nav state: %d",state_nav);
+	get_positionSetpoint();
 
 	return 0;
 }

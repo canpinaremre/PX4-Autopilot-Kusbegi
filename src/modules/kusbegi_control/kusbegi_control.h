@@ -22,7 +22,7 @@
 
 #include <lib/ecl/geo/geo.h>
 
-//#include "kusbegi_mission.h"
+#include "kusbegi_mission.h"
 
 using namespace time_literals;
 

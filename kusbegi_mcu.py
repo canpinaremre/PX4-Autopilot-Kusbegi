@@ -23,8 +23,10 @@ def send(param1,param2):
         )
 
 
+
 while(True):
 	sleep(2)
 	send(0,0)
 	sleep(2)
 	send(1,0)
+

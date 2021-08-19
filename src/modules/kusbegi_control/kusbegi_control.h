@@ -53,6 +53,8 @@ private:
 	int start_mission();
 	int stop_mission();
 	int status_mission();
+	void mission1();
+	void mission2();
 	void get_positionSetpoint();
 	void do_reposition();
 	float get_distance_global();

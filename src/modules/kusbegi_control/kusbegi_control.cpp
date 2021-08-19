@@ -171,8 +171,114 @@ void KusbegiControl::get_positionSetpoint(){
 	PX4_INFO("Lon: %f",(double)_global_pos_s.lon);
 }
 
-void KusbegiControl::run_kusbegi(){
+// First mission. No need to get mcu messages.
+// Required:
+// ...TODO
+void KusbegiControl::mission1()
+{
+	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
+	uint8_t state_nav = vehicle_status_sub.get().nav_state;
 
+	switch (_stage)
+	{
+	case 0:
+		/* Mission Not Started Yet */
+		break;
+	case 1:
+		//Takeoff
+		//_wait_stage = false; in mission start
+		//first go to nav_takeoff state and wait 2 sec
+		//_wait_stage = true;
+		//check if we are loitering (takeoff done)
+		//than restart _wait_stage = false; and next stage
+		if((state_nav == vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER) && _wait_stage)
+		{
+			usleep(1_s);
+			_wait_stage = false;
+			_stage++;
+			break;
+		}
+
+		if(!_wait_stage){
+			_wait_stage = true;
+			send_vehicle_command(vehicle_command_s::VEHICLE_CMD_NAV_TAKEOFF);
+			send_vehicle_command(vehicle_command_s::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.f, 0.f);
+			PX4_INFO("Kusbegi - Take off!!");
+			usleep(2_s);
+		}
+
+		break;
+
+	case 2:
+		//Go to pool location
+		if(!_wait_stage){
+			_wait_stage = true;
+			send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
+						     PX4_CUSTOM_SUB_MODE_AUTO_LOITER);
+			_target_lat = missionList[_wp].lat;
+			_target_lon = missionList[_wp].lon;
+			do_reposition();
+
+		}
+		else{
+			if(get_distance_global() < 1.0f){
+				_stage++;
+				_wp++;
+				_wait_stage = false;
+				PX4_INFO("Mission Next WP: %d",_wp);
+			}
+			else{
+				print_distance_global();
+			}
+		}
+		break;
+	case 3:
+		// int wp_count = 2
+		// float min_dist_to_target = 1.0f;
+		send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
+						     PX4_CUSTOM_SUB_MODE_AUTO_LOITER);
+		for(int i = 0; i < 5; i++)
+		{
+
+			_target_lat = missionList[_wp+i].lat;
+			_target_lon = missionList[_wp+i].lon;
+			do_reposition();
+			while(get_distance_global() > 1.0f)
+			{
+				usleep(1_s);
+				//wait
+			}
+			PX4_INFO("Mission Next WP: %d",_wp+i);
+
+		}
+		_stage++;
+		_wp++;
+		_wait_stage = false;
+
+
+		break;
+	case 4:
+		PX4_INFO("DONE");
+		_stage++;
+		break;
+	case 5:
+
+
+		break;
+
+	default:
+		break;
+	}
+}
+
+// Mission 2
+// Go to pool, line 1, detect red area while navigating to line 2,
+// go to start. Go to pool, take water, line 1, red area, dump water,
+// go to line 2, go to end.
+// Required:
+// ...TODO
+void KusbegiControl::mission2()
+{
 	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
 	uint8_t state_nav = vehicle_status_sub.get().nav_state;
 
@@ -209,6 +315,11 @@ void KusbegiControl::run_kusbegi(){
 		break;
 	case 1:
 		//Takeoff
+		//_wait_stage = false; in mission start
+		//first go to nav_takeoff state and wait 2 sec
+		//_wait_stage = true;
+		//check if we are loitering (takeoff done)
+		//than restart _wait_stage = false; and next stage
 		if((state_nav == vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER) && _wait_stage)
 		{
 			usleep(1_s);
@@ -332,6 +443,14 @@ void KusbegiControl::run_kusbegi(){
 	default:
 		break;
 	}
+}
+
+void KusbegiControl::run_kusbegi(){
+
+	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
+	uint8_t state_nav = vehicle_status_sub.get().nav_state;
+
+	mission1();
 
 	switch (_phase)
 	{

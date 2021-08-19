@@ -31,7 +31,8 @@ private:
 		FAIL_SAFE = 5,
 		TRANSITION =6,
 		DRV_TYPE_V = 7,
-		DRV_TYPE_X = 8
+		DRV_TYPE_X = 8,
+		CIRCLE_MODE = 9
 	};
 
 	flightPhase _phase{flightPhase::IDLE};
@@ -51,6 +52,7 @@ private:
 	void _sendPosition();
 	void _resetSpeed();
 	void _resetSPs();
+	void _do_circle();
 
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::MPC_XY_CRUISE>) _param_mpc_xy_cruise /**< cruise speed for circle approach */
@@ -65,6 +67,11 @@ private:
 	float _max_target_speed;
 	float _offsetApplied[3];
 	float _offsetSpeed[3];
+
+	bool _shouldDrive = false;
+	float _radius_of_circle;
+	float _v;
+	matrix::Vector2f _center;
 
 
 protected:

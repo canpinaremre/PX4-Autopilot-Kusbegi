@@ -58,6 +58,7 @@ private:
 	void navigate_MissionList(int targetWp);
 	void get_positionSetpoint();
 	void do_reposition();
+	void do_circle();
 	float get_distance_global();
 	void print_distance_global();
 	int test_func();

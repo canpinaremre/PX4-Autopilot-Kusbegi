@@ -47,15 +47,84 @@ bool FlightTaskKusbegi::activate(const vehicle_local_position_setpoint_s &last_s
 	// _kusbegi_mission_s.kusbegi_state = 2;
 	// _kusbegi_mission_pub.publish(_kusbegi_mission_s);
 
+	_center = Vector2f(_position);
+
+
 	return ret;
 
 }
 
+void FlightTaskKusbegi::_do_circle()
+{
+	_v = 5.0f;
+	float _r = _radius_of_circle;
+	_shouldDrive = false;
+	_phase = CIRCLE_MODE;
+
+	const Vector2f center_to_position = Vector2f(_position) - _center;
+
+	// xy velocity to go around in a circle
+	Vector2f velocity_xy(-center_to_position(1), center_to_position(0));
+	velocity_xy = velocity_xy.unit_or_zero();
+	velocity_xy *= _v;
+
+	// xy velocity adjustment to stay on the radius distance
+	velocity_xy += (_r - center_to_position.norm()) * center_to_position.unit_or_zero();
+
+	_position_setpoint(0) = _position_setpoint(1) = NAN;
+	_velocity_setpoint.xy() = velocity_xy;
+	_acceleration_setpoint.xy() = -center_to_position.unit_or_zero() * _v * _v / _r;
+
+}
+
+
 
 bool FlightTaskKusbegi::update()
 {
+	_shouldDrive = true;
+	static bool shouldCircle=false;
+	static Vector2f first_pos;
+	static uint32_t circleTime;
+	if (_kusbegi_mission_sub.updated())
+	{
+		_kusbegi_mission_sub.copy(&_kusbegi_mission_s);
+		if(_kusbegi_mission_s.publisher == kusbegi_mission_s::MODULE_KUSBEGI_CONTROL)
+		{
+			if(_kusbegi_mission_s.kusbegi_state == kusbegi_mission_s::KUSBEGI_STATE_DO_CIRCLE)
+			{
+				_radius_of_circle = _kusbegi_mission_s.param1;
+				shouldCircle = true;
+				//TODO: Use NED to BODY
+				// Fix yaw
+				_center(0) += _radius_of_circle;
+				first_pos = Vector2f(_position);
+				circleTime = hrt_absolute_time();
 
-	if(_kusbegi_target_sub.updated()){
+			}
+		}
+
+
+	}
+	if(shouldCircle)
+	{
+		_do_circle();
+		if(
+			(hrt_absolute_time() - circleTime) > 2_s &&
+			fabsf(_position(0) - first_pos(0)) < 1.5f &&
+			fabsf(_position(1) - first_pos(1)) < 1.5f
+
+		)
+		{
+			shouldCircle = false;
+			_kusbegi_mission_s.timestamp = hrt_absolute_time();
+			_kusbegi_mission_s.publisher = kusbegi_mission_s::FT_KUSBEGI;
+			_kusbegi_mission_s.kusbegi_state = kusbegi_mission_s::KUSBEGI_STATE_DO_CIRCLE_DONE;
+			_kusbegi_mission_pub.publish(_kusbegi_mission_s);
+		}
+
+	}
+
+	if(_kusbegi_target_sub.updated() && _shouldDrive){
 		_kusbegi_target_sub.update(&_kusbegi_target_s);
 
 		switch (_kusbegi_target_s.drive_type)
@@ -96,6 +165,10 @@ bool FlightTaskKusbegi::update()
 		break;
 	case DRV_TYPE_X:
 			_gotoOffset();
+		break;
+	case CIRCLE_MODE:
+		return true;
+		break;
 	default:
 		break;
 	}

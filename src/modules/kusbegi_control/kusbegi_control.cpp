@@ -137,7 +137,7 @@ void KusbegiControl::Run()
 	run_kusbegi();
 }
 void KusbegiControl::handle_mcu_message(){
-
+	//TODO: check publisher
 	switch ((int)_cmd_mission_s.param1)
 	{
 		case MCU_CMD_TAKEOFF:
@@ -197,6 +197,43 @@ void KusbegiControl::navigate_MissionList(int targetWp)
 	_wp += targetWp;
 }
 
+void KusbegiControl::do_circle()
+{
+	//full stop to get nice _position
+	usleep(2_s);
+	startFlightTask();
+	//give some time to task
+	usleep(1_s);
+	float radius = 10;
+	_kusbegi_mission_s.timestamp = hrt_absolute_time();
+	_kusbegi_mission_s.publisher = kusbegi_mission_s::MODULE_KUSBEGI_CONTROL;
+	_kusbegi_mission_s.kusbegi_state = kusbegi_mission_s::KUSBEGI_STATE_DO_CIRCLE;
+	_kusbegi_mission_s.param1 = radius;
+	_kusbegi_mission_pub.publish(_kusbegi_mission_s);
+
+	//Wait for flight task do finish circle
+	while(true)
+	{
+		if (_kusbegi_mission_sub.updated())
+		{
+			_kusbegi_mission_sub.copy(&_kusbegi_mission_s);
+			if(_kusbegi_mission_s.publisher == kusbegi_mission_s::FT_KUSBEGI)
+			{
+				if(_kusbegi_mission_s.kusbegi_state == kusbegi_mission_s::KUSBEGI_STATE_DO_CIRCLE_DONE)
+				{
+					//Done
+					break;
+				}
+			}
+
+
+		}
+
+	}
+	PX4_INFO("Circle done!");
+
+
+}
 
 // First mission. No need to get mcu messages.
 // Required:
@@ -250,6 +287,7 @@ void KusbegiControl::mission1()
 	case 3:
 		// Do circle around the pole
 		PX4_INFO("Circle!");
+		do_circle();
 
 		_stage++;
 		break;

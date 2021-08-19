@@ -171,6 +171,33 @@ void KusbegiControl::get_positionSetpoint(){
 	PX4_INFO("Lon: %f",(double)_global_pos_s.lon);
 }
 
+// Go to waypoints in missionList
+// starting from index _wp to _wp + targetWp
+// updates _wp to last navigated waypoint index
+void KusbegiControl::navigate_MissionList(int targetWp)
+{
+	float min_dist_to_target = 3.0f;
+
+	send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
+					     PX4_CUSTOM_SUB_MODE_AUTO_LOITER);
+	for(int i = 0; i <= targetWp; i++)
+	{
+		PX4_INFO("Mission Next WP: %d",_wp+i);
+		_target_lat = missionList[_wp+i].lat;
+		_target_lon = missionList[_wp+i].lon;
+		do_reposition();
+
+		while(get_distance_global() > min_dist_to_target)
+		{
+			//wait
+			usleep(1_s);
+		}
+
+	}
+	_wp += targetWp;
+}
+
+
 // First mission. No need to get mcu messages.
 // Required:
 // ...TODO
@@ -185,12 +212,12 @@ void KusbegiControl::mission1()
 		/* Mission Not Started Yet */
 		break;
 	case 1:
-		//Takeoff
-		//_wait_stage = false; in mission start
-		//first go to nav_takeoff state and wait 2 sec
-		//_wait_stage = true;
-		//check if we are loitering (takeoff done)
-		//than restart _wait_stage = false; and next stage
+		// Takeoff
+		// _wait_stage = false; in mission start
+		// first go to nav_takeoff state and wait 2 sec
+		// _wait_stage = true;
+		// check if we are loitering (takeoff done)
+		// than restart _wait_stage = false; and next stage
 		if((state_nav == vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER) && _wait_stage)
 		{
 			usleep(1_s);
@@ -210,60 +237,59 @@ void KusbegiControl::mission1()
 		break;
 
 	case 2:
-		//Go to pool location
-		if(!_wait_stage){
-			_wait_stage = true;
-			send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
-						     PX4_CUSTOM_SUB_MODE_AUTO_LOITER);
-			_target_lat = missionList[_wp].lat;
-			_target_lon = missionList[_wp].lon;
-			do_reposition();
+		// _wp is 0
+		// WPs are line-1_bottom, line-1_top, center
+		//               0            1          2
+		navigate_MissionList(2);
+		// _wp is now 2
 
-		}
-		else{
-			if(get_distance_global() < 1.0f){
-				_stage++;
-				_wp++;
-				_wait_stage = false;
-				PX4_INFO("Mission Next WP: %d",_wp);
-			}
-			else{
-				print_distance_global();
-			}
-		}
-		break;
-	case 3:
-		// int wp_count = 2
-		// float min_dist_to_target = 1.0f;
-		send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
-						     PX4_CUSTOM_SUB_MODE_AUTO_LOITER);
-		for(int i = 0; i < 5; i++)
-		{
-
-			_target_lat = missionList[_wp+i].lat;
-			_target_lon = missionList[_wp+i].lon;
-			do_reposition();
-			while(get_distance_global() > 1.0f)
-			{
-				usleep(1_s);
-				//wait
-			}
-			PX4_INFO("Mission Next WP: %d",_wp+i);
-
-		}
 		_stage++;
-		_wp++;
 		_wait_stage = false;
 
+		break;
+	case 3:
+		// Do circle around the pole
+		PX4_INFO("Circle!");
 
+		_stage++;
 		break;
 	case 4:
-		PX4_INFO("DONE");
+		// _wp is 2 update it to 3 and navigate from 3 to 6
+		// WPs are line-2_top, line-2_bottom,  start, finish
+		//               3            4          5	6
+		_wp = 3;
+		// 3 + 3 = 6 is the destination wp index
+		navigate_MissionList(3);
+		// _wp is now 6. But it doesn't matter.
+		// Mission is done.
+		// Go to land.
 		_stage++;
+
 		break;
 	case 5:
 
+		PX4_INFO("DONE");
+		_stage++;
+		PX4_INFO("Landing");
 
+		break;
+	case 6:
+		//land
+
+		if(state_nav == vehicle_status_s::NAVIGATION_STATE_AUTO_LAND)
+		{
+			_stage++;
+		}
+		else{
+			usleep(1_s);
+			send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
+					     PX4_CUSTOM_SUB_MODE_AUTO_LAND);
+
+		}
+
+		break;
+	case 7:
+		//Do nothing
 		break;
 
 	default:

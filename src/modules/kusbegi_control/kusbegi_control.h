@@ -55,6 +55,7 @@ private:
 	int status_mission();
 	void mission1();
 	void mission2();
+	void navigate_MissionList(int targetWp);
 	void get_positionSetpoint();
 	void do_reposition();
 	float get_distance_global();

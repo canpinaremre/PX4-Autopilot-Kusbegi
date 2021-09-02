@@ -93,10 +93,13 @@ bool FlightTaskKusbegi::update()
 			if(_kusbegi_mission_s.kusbegi_state == kusbegi_mission_s::KUSBEGI_STATE_DO_CIRCLE)
 			{
 				_radius_of_circle = _kusbegi_mission_s.param1;
+				float circle_yaw = _kusbegi_mission_s.param2;
 				shouldCircle = true;
-				//TODO: Use NED to BODY
-				// Fix yaw
-				_center(0) += _radius_of_circle;
+				_center = Vector2f(_position);
+
+				_center(0) += _radius_of_circle * cosf(circle_yaw);
+				_center(1) += _radius_of_circle * sinf(circle_yaw);
+
 				first_pos = Vector2f(_position);
 				circleTime = hrt_absolute_time();
 

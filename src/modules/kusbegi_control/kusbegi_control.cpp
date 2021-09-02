@@ -209,6 +209,7 @@ void KusbegiControl::do_circle()
 	_kusbegi_mission_s.publisher = kusbegi_mission_s::MODULE_KUSBEGI_CONTROL;
 	_kusbegi_mission_s.kusbegi_state = kusbegi_mission_s::KUSBEGI_STATE_DO_CIRCLE;
 	_kusbegi_mission_s.param1 = radius;
+	_kusbegi_mission_s.param2 = _circle_yaw;
 	_kusbegi_mission_pub.publish(_kusbegi_mission_s);
 
 	//Wait for flight task do finish circle
@@ -306,9 +307,19 @@ void KusbegiControl::mission1()
 		break;
 	case 5:
 
-		PX4_INFO("DONE");
+
 		_stage++;
-		PX4_INFO("Landing");
+
+		if(first_run)
+		{
+			first_run = false;
+			_stage = 2;
+			_wp = 0;
+		}
+		else
+		{
+			PX4_INFO("Landing");
+		}
 
 		break;
 	case 6:

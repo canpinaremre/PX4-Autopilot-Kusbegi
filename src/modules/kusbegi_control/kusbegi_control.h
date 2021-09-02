@@ -149,6 +149,7 @@ private:
 	int mytest{0};
 	uint64_t _last_cmd_time{hrt_absolute_time()};
 	uint32_t _cmd_err_cnt{0};
+	bool first_run = true;
 	bool _mission_active{false};
 
 	bool get_mcu_message();

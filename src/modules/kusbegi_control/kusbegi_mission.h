@@ -12,6 +12,8 @@ typedef struct
 	float lon;
 }missionItem;
 
+float _circle_yaw = -1.57f; // YAW POINTING TO CENTER OF CIRCLE
+
 missionItem missionList[KSB_MISSION_ITEM_COUNT]{
 	//SITL
 	{0,47.397762f,8.546075f},

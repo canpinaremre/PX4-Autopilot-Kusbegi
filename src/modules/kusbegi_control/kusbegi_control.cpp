@@ -203,33 +203,48 @@ void KusbegiControl::do_circle()
 	usleep(2_s);
 	startFlightTask();
 	//give some time to task
-	usleep(1_s);
+
 	float radius = 10;
-	_kusbegi_mission_s.timestamp = hrt_absolute_time();
-	_kusbegi_mission_s.publisher = kusbegi_mission_s::MODULE_KUSBEGI_CONTROL;
-	_kusbegi_mission_s.kusbegi_state = kusbegi_mission_s::KUSBEGI_STATE_DO_CIRCLE;
-	_kusbegi_mission_s.param1 = radius;
-	_kusbegi_mission_s.param2 = _circle_yaw;
-	_kusbegi_mission_pub.publish(_kusbegi_mission_s);
+	while(true)
+	{
+		_control_to_task.timestamp = hrt_absolute_time();
+		_control_to_task.mission = kusbegi_control_to_task_s::MISSON_DO_CIRCLE;
+		_control_to_task.param1 = radius;
+		_control_to_task.param2 = _circle_yaw;
+		_kusbegi_control_to_task.publish(_control_to_task);
+
+		// Give some time to take uorb message and send back
+		usleep(100_ms);
+		if (_kusbegi_task_to_control.update(&_task_to_control))
+		{
+
+			if(_task_to_control.status == kusbegi_task_to_control_s::CIRCLE_STARTED)
+			{
+				PX4_INFO("break");
+				//Started circle, stop sending
+				break;
+			}
+
+		}
+	}
+
 
 	//Wait for flight task do finish circle
 	while(true)
 	{
-		if (_kusbegi_mission_sub.updated())
+
+		if (_kusbegi_task_to_control.update(&_task_to_control))
 		{
-			_kusbegi_mission_sub.copy(&_kusbegi_mission_s);
-			if(_kusbegi_mission_s.publisher == kusbegi_mission_s::FT_KUSBEGI)
+
+			if(_task_to_control.status == kusbegi_task_to_control_s::CIRCLE_DONE)
 			{
-				if(_kusbegi_mission_s.kusbegi_state == kusbegi_mission_s::KUSBEGI_STATE_DO_CIRCLE_DONE)
-				{
-					//Done
-					break;
-				}
+				PX4_INFO("break");
+				//Started circle, stop sending
+				break;
 			}
 
-
 		}
-
+		usleep(100_ms);
 	}
 	PX4_INFO("Circle done!");
 

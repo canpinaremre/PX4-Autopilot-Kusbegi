@@ -6,6 +6,8 @@
 #include <uORB/topics/position_setpoint_triplet.h>
 #include <uORB/topics/kusbegi_mission.h>
 #include <uORB/topics/kusbegi_target.h>
+#include <uORB/topics/kusbegi_control_to_task.h>
+#include <uORB/topics/kusbegi_task_to_control.h>
 
 #include <uORB/Publication.hpp>
 #include <uORB/Subscription.hpp>
@@ -45,6 +47,13 @@ private:
 
 	uORB::Subscription					_kusbegi_target_sub{ORB_ID(kusbegi_target)};
 	uORB::Subscription					_kusbegi_mission_sub{ORB_ID(kusbegi_mission)};
+
+	// Flight task and module communication
+	kusbegi_task_to_control_s _task_to_control{};
+	kusbegi_control_to_task_s _control_to_task{};
+	uORB::Subscription					_kusbegi_control_to_task{ORB_ID(kusbegi_control_to_task)};
+	uORB::Publication<kusbegi_task_to_control_s>		_kusbegi_task_to_control{ORB_ID(kusbegi_task_to_control)};
+
 	void _bodyToNedFrame(float xBody,float yBody,float yawBody);
 	void _calculatePositionFromSpeed();
 	void _calculateSpeedFromTargetSpeed();

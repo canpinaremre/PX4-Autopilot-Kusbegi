@@ -48,7 +48,8 @@ bool FlightTaskKusbegi::activate(const vehicle_local_position_setpoint_s &last_s
 	// _kusbegi_mission_pub.publish(_kusbegi_mission_s);
 
 	_center = Vector2f(_position);
-
+	_task_to_control.status = kusbegi_task_to_control_s::NONE;
+	PX4_INFO("Flight Task Activated!");
 
 	return ret;
 
@@ -85,28 +86,23 @@ bool FlightTaskKusbegi::update()
 	static bool shouldCircle=false;
 	static Vector2f first_pos;
 	static uint32_t circleTime;
-	if (_kusbegi_mission_sub.updated())
+
+
+	if (_kusbegi_control_to_task.update(&_control_to_task))
 	{
-		_kusbegi_mission_sub.copy(&_kusbegi_mission_s);
-		if(_kusbegi_mission_s.publisher == kusbegi_mission_s::MODULE_KUSBEGI_CONTROL)
+		if(_control_to_task.mission == kusbegi_control_to_task_s::MISSON_DO_CIRCLE)
 		{
-			if(_kusbegi_mission_s.kusbegi_state == kusbegi_mission_s::KUSBEGI_STATE_DO_CIRCLE)
-			{
-				_radius_of_circle = _kusbegi_mission_s.param1;
-				float circle_yaw = _kusbegi_mission_s.param2;
-				shouldCircle = true;
-				_center = Vector2f(_position);
+			_radius_of_circle = _control_to_task.param1;
+			float circle_yaw = _control_to_task.param2;
+			shouldCircle = true;
+			_center = Vector2f(_position);
+			_center(0) += _radius_of_circle * cosf(circle_yaw);
+			_center(1) += _radius_of_circle * sinf(circle_yaw);
+			first_pos = Vector2f(_position);
+			circleTime = hrt_absolute_time();
 
-				_center(0) += _radius_of_circle * cosf(circle_yaw);
-				_center(1) += _radius_of_circle * sinf(circle_yaw);
-
-				first_pos = Vector2f(_position);
-				circleTime = hrt_absolute_time();
-
-			}
+			_task_to_control.status = kusbegi_task_to_control_s::CIRCLE_STARTED;
 		}
-
-
 	}
 	if(shouldCircle)
 	{
@@ -118,14 +114,26 @@ bool FlightTaskKusbegi::update()
 
 		)
 		{
+			_task_to_control.status = kusbegi_task_to_control_s::CIRCLE_DONE;
 			shouldCircle = false;
-			_kusbegi_mission_s.timestamp = hrt_absolute_time();
-			_kusbegi_mission_s.publisher = kusbegi_mission_s::FT_KUSBEGI;
-			_kusbegi_mission_s.kusbegi_state = kusbegi_mission_s::KUSBEGI_STATE_DO_CIRCLE_DONE;
-			_kusbegi_mission_pub.publish(_kusbegi_mission_s);
+			_position_setpoint = _position;
+
+		}
+		else
+		{
+			_task_to_control.status = kusbegi_task_to_control_s::CIRCLE_STARTED;
+
 		}
 
 	}
+
+	_task_to_control.timestamp = hrt_absolute_time();
+	_kusbegi_task_to_control.publish(_task_to_control);
+
+
+
+
+
 
 	if(_kusbegi_target_sub.updated() && _shouldDrive){
 		_kusbegi_target_sub.update(&_kusbegi_target_s);

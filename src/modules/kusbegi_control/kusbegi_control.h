@@ -16,6 +16,8 @@
 #include <uORB/topics/trajectory_waypoint.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
 #include <uORB/topics/vehicle_global_position.h>
+#include <uORB/topics/kusbegi_control_to_task.h>
+#include <uORB/topics/kusbegi_task_to_control.h>
 
 #include <uORB/Publication.hpp>
 #include <uORB/Subscription.hpp>
@@ -83,6 +85,16 @@ private:
 	uORB::Subscription					_local_pos_sub{ORB_ID(vehicle_local_position_setpoint)};
 	uORB::Subscription					_kusbegi_target_sub{ORB_ID(kusbegi_target)};
 	uORB::Subscription					_kusbegi_mission_sub{ORB_ID(kusbegi_mission)};
+
+
+	// Flight task and module communication
+	kusbegi_task_to_control_s _task_to_control{};
+	kusbegi_control_to_task_s _control_to_task{};
+
+	uORB::Publication<kusbegi_control_to_task_s>		_kusbegi_control_to_task{ORB_ID(kusbegi_control_to_task)};
+	uORB::Subscription					_kusbegi_task_to_control{ORB_ID(kusbegi_task_to_control)};
+
+
 
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::NAV_FW_ALT_RAD>)

@@ -74,6 +74,8 @@ set(msg_files
 	irlock_report.msg
 	kusbegi_mission.msg
 	kusbegi_target.msg
+	kusbegi_control_to_task.msg
+	kusbegi_task_to_control.msg
 	landing_gear.msg
 	landing_target_innovations.msg
 	landing_target_pose.msg

@@ -76,6 +76,9 @@ void FlightTaskKusbegi::_do_circle()
 	_velocity_setpoint.xy() = velocity_xy;
 	_acceleration_setpoint.xy() = -center_to_position.unit_or_zero() * _v * _v / _r;
 
+	_yaw_setpoint = wrap_pi(atan2f(center_to_position(1), center_to_position(0)) + (sign(_v) * M_PI_F / 2.f));
+	_yawspeed_setpoint = _v / _r;
+
 }
 
 

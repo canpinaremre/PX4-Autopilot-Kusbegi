@@ -52,7 +52,8 @@ private:
 	int sendSetpoint(uint8_t drive_type, float x, float y, float z);
 	int startFlightTask();
 	int takeOff();
-	int start_mission();
+	int start_mission1();
+	int start_mission2();
 	int stop_mission();
 	int status_mission();
 	void mission1();
@@ -164,6 +165,7 @@ private:
 	bool first_run = true;
 	bool _mission_active{false};
 	float _mission_alt;
+	uint8_t _active_mission = 0;
 
 	bool get_mcu_message();
 	bool send_message_to_mcu(mcuSetState state,float fparam);

@@ -567,7 +567,17 @@ void KusbegiControl::run_kusbegi(){
 	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
 	uint8_t state_nav = vehicle_status_sub.get().nav_state;
 
-	mission1();
+	switch(_active_mission)
+	{
+	case 1:
+		mission1();
+		break;
+	case 2:
+		mission2();
+		break;
+	default:
+		break;
+	}
 
 	switch (_phase)
 	{
@@ -675,7 +685,7 @@ Kusbegi control module
 	PRINT_MODULE_USAGE_DEFAULT_COMMANDS();
 	return 0;
 }
-int KusbegiControl::start_mission(){
+int KusbegiControl::start_mission1(){
 	//TODO: start from argv stage
 
 	//stage 1 is takeoff
@@ -686,10 +696,28 @@ int KusbegiControl::start_mission(){
 	param_t param = param_handle(px4::params::MIS_TAKEOFF_ALT);
 	float takeoff_alt = 10.0f;
 	param_set(param,&takeoff_alt);
+	_active_mission = 1;
 
 
 	return 0;
 }
+
+int KusbegiControl::start_mission2(){
+	//TODO: start from argv stage
+
+	//stage 1 is takeoff
+	_stage = 1;
+	_wp = 0;
+	_wait_stage = false;
+
+	param_t param = param_handle(px4::params::MIS_TAKEOFF_ALT);
+	float takeoff_alt = 10.0f;
+	param_set(param,&takeoff_alt);
+	_active_mission = 2;
+
+	return 0;
+}
+
 int KusbegiControl::startFlightTask(){
 	PX4_INFO("Entering FlightTask Kusbegi");
 	send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
@@ -751,14 +779,17 @@ int KusbegiControl::custom_command(int argc, char *argv[])
 	if (!strcmp(verb, "test")) {
 		return _object.load()->test_func();
 	}
-	else if(!strcmp(verb, "start_mission")){
-		return _object.load()->start_mission();
+	else if(!strcmp(verb, "start_mission1")){
+		return _object.load()->start_mission1();
 	}
 	else if(!strcmp(verb, "stop_mission")){
 		return _object.load()->stop_mission();
 	}
 	else if(!strcmp(verb, "status_mission")){
 		return _object.load()->status_mission();
+	}
+	else if(!strcmp(verb, "start_mission2")){
+		return _object.load()->start_mission2();
 	}
 
 	return print_usage("unknown command");

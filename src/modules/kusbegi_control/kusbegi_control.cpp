@@ -48,7 +48,7 @@ void KusbegiControl::do_reposition(){
 	vcmd.param4 = NAN;
 	vcmd.param5 = _target_lat;
 	vcmd.param6 = _target_lon;
-	vcmd.param7 = 490.5f;
+	vcmd.param7 = _mission_alt;
 
 	vcmd.command = 192;//reposition
 
@@ -274,6 +274,9 @@ void KusbegiControl::mission1()
 		if((state_nav == vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER) && _wait_stage)
 		{
 			usleep(1_s);
+			_global_pos_sub.updated();
+			_global_pos_sub.copy(&_global_pos_s);
+			_mission_alt = _global_pos_s.alt;
 			_wait_stage = false;
 			_stage++;
 			break;
@@ -680,6 +683,9 @@ int KusbegiControl::start_mission(){
 	_wp = 0;
 	_wait_stage = false;
 
+	param_t param = param_handle(px4::params::MIS_TAKEOFF_ALT);
+	float takeoff_alt = 10.0f;
+	param_set(param,&takeoff_alt);
 
 
 	return 0;

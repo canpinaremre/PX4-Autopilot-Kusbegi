@@ -163,6 +163,7 @@ private:
 	uint32_t _cmd_err_cnt{0};
 	bool first_run = true;
 	bool _mission_active{false};
+	float _mission_alt;
 
 	bool get_mcu_message();
 	bool send_message_to_mcu(mcuSetState state,float fparam);

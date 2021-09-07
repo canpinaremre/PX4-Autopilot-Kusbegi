@@ -96,7 +96,8 @@ bool FlightTaskKusbegi::update()
 		if(_control_to_task.mission == kusbegi_control_to_task_s::MISSON_DO_CIRCLE)
 		{
 			_radius_of_circle = _control_to_task.param1;
-			float circle_yaw = _control_to_task.param2;
+			// float circle_yaw = _control_to_task.param2;
+			float circle_yaw = _yaw + 1.57f;
 			shouldCircle = true;
 			_center = Vector2f(_position);
 			_center(0) += _radius_of_circle * cosf(circle_yaw);

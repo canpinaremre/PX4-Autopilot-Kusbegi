@@ -416,6 +416,9 @@ void KusbegiControl::mission2()
 		if((state_nav == vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER) && _wait_stage)
 		{
 			usleep(1_s);
+			_global_pos_sub.updated();
+			_global_pos_sub.copy(&_global_pos_s);
+			_mission_alt = _global_pos_s.alt;
 			_wait_stage = false;
 			_stage++;
 			break;

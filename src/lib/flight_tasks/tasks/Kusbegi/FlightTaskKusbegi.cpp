@@ -89,8 +89,10 @@ void FlightTaskKusbegi::_do_circle()
 
 bool FlightTaskKusbegi::update()
 {
-	_shouldDrive = true;
+	_shouldDrive = false;
 	static bool shouldCircle=false;
+	static bool shouldDescend=false;
+	static bool shouldRedLand=false;
 	static Vector2f first_pos;
 	static uint32_t circleTime;
 
@@ -111,7 +113,74 @@ bool FlightTaskKusbegi::update()
 
 			_task_to_control.status = kusbegi_task_to_control_s::CIRCLE_STARTED;
 		}
+
+		if(_control_to_task.mission == kusbegi_control_to_task_s::MISSON_DESCEND)
+		{
+			_task_to_control.status = kusbegi_task_to_control_s::DESCENDING;
+			shouldDescend = true;
+			first_pos = Vector2f(_position);
+			_position_setpoint(0) = first_pos(0);
+			_position_setpoint(1) = first_pos(1);
+			_offsetApplied[2] = _control_to_task.param1;
+		}
+
+		if(_control_to_task.mission == kusbegi_control_to_task_s::MISSON_RED)
+		{
+			_task_to_control.status = kusbegi_task_to_control_s::RED_LANDING;
+			shouldRedLand = true;
+			shouldDescend = false;
+			shouldCircle = false;
+			first_pos = Vector2f(_position);
+			_position_setpoint(0) = first_pos(0);
+			_position_setpoint(1) = first_pos(1);
+		}
+
+
 	}
+
+	if(shouldRedLand)
+	{
+
+		if((fabsf(_position(2) - (-2.0f)) <= 0.5f) || (_position(2) >= -2.0f))
+		{
+			_position_setpoint(2) = -2.0f;
+			_task_to_control.status = kusbegi_task_to_control_s::RED_LANDED;
+			PX4_INFO("RED_LANDED Task");
+			shouldRedLand = false;
+		}
+		else
+		{
+			PX4_INFO("RED_LANDEDING Task");
+			_position_setpoint(2) += 0.01f;
+			_task_to_control.status = kusbegi_task_to_control_s::RED_LANDING;
+		}
+
+		//TODO: use param1 param2 comin from red detection
+	}
+
+
+	if(shouldDescend)
+	{
+
+		if(fabsf(_position(2) - _offsetApplied[2]) <= 0.5f)
+		{
+			_task_to_control.status = kusbegi_task_to_control_s::DESCENDING_DONE;
+			shouldDescend = false;
+			_position_setpoint(0) = first_pos(0);
+			_position_setpoint(1) = first_pos(1);
+			_position_setpoint(2) = _offsetApplied[2];
+
+
+		}
+		else
+		{
+			_task_to_control.status = kusbegi_task_to_control_s::DESCENDING;
+			_position_setpoint(0) = first_pos(0);
+			_position_setpoint(1) = first_pos(1);
+			_position_setpoint(2) = _offsetApplied[2];
+		}
+	}
+
 	if(shouldCircle)
 	{
 		_do_circle();
@@ -194,10 +263,12 @@ bool FlightTaskKusbegi::update()
 		break;
 	}
 
-	_calculateSpeedFromTargetSpeed();
-	_calculatePositionFromSpeed();
-	_sendPosition();
-	_yaw_setpoint = _local_yaw;
+	if(_shouldDrive){
+		_calculateSpeedFromTargetSpeed();
+		_calculatePositionFromSpeed();
+		_sendPosition();
+		_yaw_setpoint = _local_yaw;
+	}
 
 	return true;
 }

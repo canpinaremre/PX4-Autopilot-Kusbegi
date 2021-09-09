@@ -14,7 +14,7 @@
 #include <uORB/topics/vehicle_command.h>
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/trajectory_waypoint.h>
-#include <uORB/topics/vehicle_local_position_setpoint.h>
+#include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/kusbegi_control_to_task.h>
 #include <uORB/topics/kusbegi_task_to_control.h>
@@ -73,7 +73,7 @@ private:
 
 	kusbegi_mission_s	_kusbegi_mission_s{};
 	kusbegi_target_s	_kusbegi_target_s{};
-	vehicle_local_position_setpoint_s _local_pos_s{};
+	vehicle_local_position_s 	  _local_pos_s{};
 	vehicle_global_position_s 	  _global_pos_s{};
 	vehicle_global_position_s 	  _target_red_area{};
 
@@ -84,7 +84,7 @@ private:
 	uORB::Publication<kusbegi_target_s>			_kusbegi_target_pub{ORB_ID(kusbegi_target)};
 
 	uORB::Subscription					_global_pos_sub{ORB_ID(vehicle_global_position)};
-	uORB::Subscription					_local_pos_sub{ORB_ID(vehicle_local_position_setpoint)};
+	uORB::Subscription					_local_pos_sub{ORB_ID(vehicle_local_position)};
 	uORB::Subscription					_kusbegi_target_sub{ORB_ID(kusbegi_target)};
 	uORB::Subscription					_kusbegi_mission_sub{ORB_ID(kusbegi_mission)};
 
@@ -135,25 +135,9 @@ private:
 	};
 
 	enum mcuSetState{
-		MCU_STATE_IDLE,
-		MCU_STATE_RED_VALUE,
-		MCU_STATE_RED_POSITION,
-		MCU_STATE_POOL,
-
-		MCU_STATE_WP1,
-		MCU_STATE_WP2,
-		MCU_STATE_WP3,
-		MCU_STATE_WP4,
-		MCU_STATE_WP5,
-		MCU_STATE_WP6,
-		MCU_STATE_WP7,
-		MCU_STATE_WP8,
-		MCU_STATE_WP9,
-		MCU_STATE_WP10,
-		MCU_STATE_WP11,
-		MCU_STATE_WP12,
-		MCU_STATE_WP13,
-		MCU_STATE_WP14,
+		MCU_STATE_IDLE = 0,
+		MCU_TAKE_WATER = 1,
+		MCU_DUMP_WATER = 2
 	};
 
 	enum failsafeReason{

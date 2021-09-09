@@ -254,7 +254,7 @@ void KusbegiControl::mission1()
 {
 	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
 	uint8_t state_nav = vehicle_status_sub.get().nav_state;
-
+	min_dist_to_target = 4.0f;
 	switch (_stage)
 	{
 	case 0:
@@ -386,6 +386,7 @@ void KusbegiControl::mission2()
 		/* Mission Not Started Yet */
 		break;
 	case 1:
+		PX4_INFO("Stage 1");
 		//Takeoff
 		//_wait_stage = false; in mission start
 		//first go to nav_takeoff state and wait 2 sec
@@ -414,6 +415,7 @@ void KusbegiControl::mission2()
 		break;
 
 	case 2:
+		PX4_INFO("Stage 2");
 		// _wp is 0
 		// WPs are line-1, red-1,
 		//          0        1
@@ -427,6 +429,7 @@ void KusbegiControl::mission2()
 
 
 	case 3:
+		PX4_INFO("Stage 3");
 		// wp 2 is red-2
 		// set speed very slow and jerk small
 		// and reposition
@@ -478,6 +481,8 @@ void KusbegiControl::mission2()
 
 		break;
 	case 4:
+		PX4_INFO("Stage 4");
+		min_dist_to_target = 2.0f;
 		// update _wp to 3
 		_wp = 3;
 		// WPs are line-2, pool,
@@ -490,10 +495,68 @@ void KusbegiControl::mission2()
 
 		break;
 	case 5:
+		PX4_INFO("Stage 5");
 		//Take water TODO:
+
+
+		startFlightTask();
+		usleep(1_s);
+
+		while(true)
+		{
+			_control_to_task.timestamp = hrt_absolute_time();
+			_control_to_task.mission = kusbegi_control_to_task_s::MISSON_DESCEND;
+			_control_to_task.param1 = -1.5f;
+			_kusbegi_control_to_task.publish(_control_to_task);
+
+			// Give some time to take uorb message and send back
+			usleep(100_ms);
+			if (_kusbegi_task_to_control.update(&_task_to_control))
+			{
+
+				if(_task_to_control.status == kusbegi_task_to_control_s::DESCENDING)
+				{
+					PX4_INFO("Descending");
+					//Started descending
+					break;
+				}
+
+			}
+		}
+
+		while(true)
+		{
+
+			if (_kusbegi_task_to_control.update(&_task_to_control))
+			{
+
+				if(_task_to_control.status == kusbegi_task_to_control_s::DESCENDING_DONE)
+				{
+					PX4_INFO("DESCENDING_DONE");
+					//Started circle, stop sending
+					break;
+				}
+
+			}
+			usleep(100_ms);
+		}
+
+		send_message_to_mcu(MCU_TAKE_WATER,0.0f);
+		PX4_INFO("Taking water for 10 secs");
+		usleep(10_s);
+		send_message_to_mcu(MCU_STATE_IDLE,0.0f);
+
+		// ascend from pool
+		// same coordinate with mission altitude
+		_wp = 4;
+		navigate_MissionList(0);
+		//since we are not checking altitude in navigate
+		usleep(3_s);
+
 		_stage++;
 		break;
 	case 6:
+		PX4_INFO("Stage 6");
 		// pass line1
 		_wp = 0;
 		navigate_MissionList(0);
@@ -502,6 +565,7 @@ void KusbegiControl::mission2()
 		break;
 
 	case 7:
+		PX4_INFO("Stage 7");
 		// go to red area
 		_target_lat = _target_red_area.lat;
 		_target_lon = _target_red_area.lon;
@@ -516,18 +580,81 @@ void KusbegiControl::mission2()
 
 		break;
 	case 8:
+		PX4_INFO("Stage 8");
 		// TODO:red land
+
+		startFlightTask();
+		usleep(1_s);
+
+		while(true)
+		{
+			_control_to_task.timestamp = hrt_absolute_time();
+			_control_to_task.mission = kusbegi_control_to_task_s::MISSON_RED;
+			_kusbegi_control_to_task.publish(_control_to_task);
+
+			// Give some time to take uorb message and send back
+			usleep(100_ms);
+			if (_kusbegi_task_to_control.update(&_task_to_control))
+			{
+
+				if(_task_to_control.status == kusbegi_task_to_control_s::RED_LANDING)
+				{
+					PX4_INFO("RED_LANDING");
+					//Started descending
+					break;
+				}
+
+			}
+		}
+
+		while(true)
+		{
+
+			if (_kusbegi_task_to_control.update(&_task_to_control))
+			{
+
+				// get mcu message
+				get_mcu_message();
+				//get red detection and send to flight task
+				_control_to_task.timestamp = hrt_absolute_time();
+				_control_to_task.mission = kusbegi_control_to_task_s::MISSON_RED;
+				_control_to_task.param1 = _cmd_mission_s.param1;
+				_control_to_task.param2 = _cmd_mission_s.param2;
+				_kusbegi_control_to_task.publish(_control_to_task);
+
+				// If too close to ground send signal from task
+				if(_task_to_control.status == kusbegi_task_to_control_s::RED_LANDED)
+				{
+					PX4_INFO("RED_LANDED");
+					//Started circle, stop sending
+					break;
+				}
+
+			}
+			usleep(100_ms);
+		}
+
 
 		_stage++;
 		break;
 
 	case 9:
-		//TODO: dump water
+		PX4_INFO("Stage 9");
+		send_message_to_mcu(MCU_DUMP_WATER,0.0f);
+		PX4_INFO("Dumping water for 10 secs");
+		usleep(10_s);
+		send_message_to_mcu(MCU_STATE_IDLE,0.0f);
+
+		min_dist_to_target = 4.0f;
+
+		do_reposition();
+		usleep(3_s);
 
 		_stage++;
 		break;
 
 	case 10:
+		PX4_INFO("Stage 10");
 		// update _wp to 3 and 5 =  line2 and finish
 		_wp = 3;
 		navigate_MissionList(0);
@@ -539,12 +666,14 @@ void KusbegiControl::mission2()
 		break;
 
 	case 11:
+		PX4_INFO("Stage 11");
 		// go to end
 
 		_stage++;
 		break;
 
 	case 12:
+		PX4_INFO("Stage 12");
 		//land
 
 		if(state_nav == vehicle_status_s::NAVIGATION_STATE_AUTO_LAND)
@@ -571,8 +700,8 @@ void KusbegiControl::mission2()
 
 void KusbegiControl::run_kusbegi(){
 
-	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
-	uint8_t state_nav = vehicle_status_sub.get().nav_state;
+	// uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
+	// uint8_t state_nav = vehicle_status_sub.get().nav_state;
 
 	switch(_active_mission)
 	{
@@ -589,44 +718,7 @@ void KusbegiControl::run_kusbegi(){
 		break;
 	}
 
-	switch (_phase)
-	{
-	case IDLE:
-		//TODO:reset _kusbegi_target_s
-		// _kusbegi_target_s.drive_type = kusbegi_target_s::KUSBEGI_DRV_TYPE_IDLE;
-		// _kusbegi_target_pub.publish(_kusbegi_target_s);
-		break;
-	case TAKEOFF:
-		//TODO: use stored take off altitude
-		//now continue with default take off altitude
 
-		//switch to takeoff mode and arm
-		// send_vehicle_command(vehicle_command_s::VEHICLE_CMD_NAV_TAKEOFF);
-		// send_vehicle_command(vehicle_command_s::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.f, 0.f);
-		// usleep(2_s);
-		// PX4_INFO("Kusbegi - Take off!!");
-		//_phase = TRANSITION;
-
-		break;
-	case TRANSITION:
-		if(state_nav == vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER)
-		{
-			_phase = IDLE;
-			// _stage++;
-		}
-
-		break;
-	case SPEED_IN_FRD_F:
-		// _kusbegi_target_s.drive_type = kusbegi_target_s::KUSBEGI_DRV_TYPE_V;
-		// _kusbegi_target_s.x = 5.0f;
-		// _kusbegi_target_pub.publish(_kusbegi_target_s);
-
-		break;
-	default:
-		// _phase = FAIL_SAFE;
-		// PX4_WARN("UNKNOWN STATE: Going failsafe");
-		break;
-	}
 }
 
 /**

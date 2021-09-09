@@ -311,16 +311,27 @@ void KusbegiControl::mission1()
 		_stage++;
 		break;
 	case 4:
-		// _wp is 2 update it to 3 and navigate from 3 to 6
-		// WPs are line-2_top, line-2_bottom,  start, finish
-		//               3            4          5	6
+
 		_wp = 3;
-		// 3 + 3 = 6 is the destination wp index
-		navigate_MissionList(3);
-		// _wp is now 6. But it doesn't matter.
-		// Mission is done.
-		// Go to land.
+		if(first_run)
+		{
+			// First run just go tp line-2 top and line-2bottom
+			// than we will go to stage 2 in case 5
+			navigate_MissionList(1);
+		}
+		else
+		{
+			// _wp is 2 update it to 3 and navigate from 3 to 6
+			// WPs are line-2_top, line-2_bottom,  start, finish
+			//               3            4          5	6
+			// 3 + 3 = 6 is the destination wp index
+			navigate_MissionList(3);
+			// _wp is now 6. But it doesn't matter.
+			// Mission is done.
+			// Go to land.
+		}
 		_stage++;
+
 
 		break;
 	case 5:
@@ -572,6 +583,9 @@ void KusbegiControl::run_kusbegi(){
 
 	switch(_active_mission)
 	{
+	case 0:
+		// None
+		break;
 	case 1:
 		mission1();
 		break;

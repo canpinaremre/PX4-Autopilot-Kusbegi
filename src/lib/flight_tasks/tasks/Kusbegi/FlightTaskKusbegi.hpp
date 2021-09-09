@@ -79,7 +79,7 @@ private:
 
 	bool _shouldDrive = false;
 	float _radius_of_circle;
-	float _v;
+	float _v = 0;
 	matrix::Vector2f _center;
 
 

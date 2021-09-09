@@ -57,7 +57,11 @@ bool FlightTaskKusbegi::activate(const vehicle_local_position_setpoint_s &last_s
 
 void FlightTaskKusbegi::_do_circle()
 {
-	_v = 5.0f;
+	_v += 0.1f;
+	if(_v >= 5.0f)
+	{
+		_v = 5.0f;
+	}
 	float _r = _radius_of_circle;
 	_shouldDrive = false;
 	_phase = CIRCLE_MODE;
@@ -112,7 +116,7 @@ bool FlightTaskKusbegi::update()
 	{
 		_do_circle();
 		if(
-			(hrt_absolute_time() - circleTime) > 2_s &&
+			(hrt_absolute_time() - circleTime) > 4_s &&
 			fabsf(_position(0) - first_pos(0)) < 1.5f &&
 			fabsf(_position(1) - first_pos(1)) < 1.5f
 
@@ -120,7 +124,9 @@ bool FlightTaskKusbegi::update()
 		{
 			_task_to_control.status = kusbegi_task_to_control_s::CIRCLE_DONE;
 			shouldCircle = false;
-			_position_setpoint = _position;
+			_position_setpoint(0) = _position_setpoint(1) = NAN;
+			_velocity_setpoint(0) = _velocity_setpoint(1) = NAN;
+			_acceleration_setpoint(0) = _acceleration_setpoint(1) = NAN;
 
 		}
 		else

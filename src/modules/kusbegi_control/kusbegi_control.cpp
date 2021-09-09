@@ -137,13 +137,12 @@ void KusbegiControl::Run()
 	run_kusbegi();
 }
 void KusbegiControl::handle_mcu_message(){
-	//TODO: check publisher
+
 	switch ((int)_cmd_mission_s.param1)
 	{
 		case MCU_CMD_TAKEOFF:
 			PX4_INFO("Take off command received");
 			_phase = TAKEOFF;
-			//TODO: store the takeoff altitude
 			break;
 		case MCU_CMD_LAND:
 			PX4_INFO("Land command received");
@@ -176,7 +175,6 @@ void KusbegiControl::get_positionSetpoint(){
 // updates _wp to last navigated waypoint index
 void KusbegiControl::navigate_MissionList(int targetWp)
 {
-	float min_dist_to_target = 3.0f;
 
 	send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
 					     PX4_CUSTOM_SUB_MODE_AUTO_LOITER);
@@ -252,8 +250,6 @@ void KusbegiControl::do_circle()
 }
 
 // First mission. No need to get mcu messages.
-// Required:
-// ...TODO
 void KusbegiControl::mission1()
 {
 	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
@@ -376,40 +372,12 @@ void KusbegiControl::mission1()
 }
 
 // Mission 2
-// Go to pool, line 1, detect red area while navigating to line 2,
-// go to start. Go to pool, take water, line 1, red area, dump water,
-// go to line 2, go to end.
-// Required:
-// ...TODO
 void KusbegiControl::mission2()
 {
 	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
 	uint8_t state_nav = vehicle_status_sub.get().nav_state;
 
 	get_mcu_message();
-	switch (_cmd_result)
-	{
-	case CMD_OK:
-		handle_mcu_message();
-		break;
-	case CMD_ERROR:
-		_cmd_err_cnt++;
-		if(_cmd_err_cnt >= MAX_CMD_ERR_CNT){
-			_phase = FAIL_SAFE;
-			_failsafe_reason = FS_CMD_ERR;
-		}
-		break;
-	case NO_CMD:
-		if((hrt_absolute_time() - _last_cmd_time) > CMD_TIMEOUT){
-			if(_phase == IDLE){
-				//TODO: _phase = FAIL_SAFE;
-				_failsafe_reason = FS_CMD_TIMEOUT;
-			}
-		}
-		break;
-	default:
-		break;
-	}
 
 
 	switch (_stage)
@@ -447,10 +415,10 @@ void KusbegiControl::mission2()
 
 	case 2:
 		// _wp is 0
-		// WPs are line-1_bottom, line-1_top, start_redline
-		//               0            1          2
-		navigate_MissionList(2);
-		// _wp is now 2
+		// WPs are line-1, red-1,
+		//          0        1
+		navigate_MissionList(1);
+		// _wp is now 1
 
 		_stage++;
 		_wait_stage = false;
@@ -459,89 +427,124 @@ void KusbegiControl::mission2()
 
 
 	case 3:
-		// TODO: set yaw
+		// wp 2 is red-2
+		// set speed very slow and jerk small
+		// and reposition
 
-		//Go with speed and detect red
-		if(!_wait_stage){
-			_wait_stage = true;
+		_param_volatile = param_handle(px4::params::MPC_XY_CRUISE);
+		// save param value
+		param_get(_param_volatile,&_xy_cruise_float);
 
-			startFlightTask();
+		// set param as:
+		_param_float = 2.0f;
+		param_set(_param_volatile,&_param_float);
+
+		_param_volatile = param_handle(px4::params::MPC_JERK_AUTO);
+		// save param value
+		param_get(_param_volatile,&_jerk_float);
+
+		// set param as:
+		_param_float = 2.0f;
+		param_set(_param_volatile,&_param_float);
+
+
+		_wp = 2;
+		_target_lat = missionList[_wp].lat;
+		_target_lon = missionList[_wp].lon;
+		do_reposition();
+
+		while(get_distance_global() > min_dist_to_target)
+		{
+			// detect red TODO:
+			_global_pos_sub.updated();
+			_global_pos_sub.copy(&_global_pos_s);
+			if(1)//red bigger TODO:
+			{
+				_target_red_area = _global_pos_s;
+			}
 			usleep(1_s);
-			//TODO: adjust yaw
-
-			usleep(200_ms);
-			// TODO: NED to BODY fix
-			sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_V,0.0f,5.0f,0.0f);
-
-			//TODO: send MCU msg to detect red
-			_timeout_time = hrt_absolute_time();
 		}
-		//get MCU red target msg
-		//handle red target msg
-		if(hrt_absolute_time() - _timeout_time > 10_s){
-			//check distance or timeout if we are out of range
-			_stage++;
-			sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_V,0.0f,0.0f,0.0f);
-			PX4_INFO("Timeout");
-		}
-		//CHECK WP 3 == stop_redline
+
+
+		// set old parameters
+		_param_volatile = param_handle(px4::params::MPC_XY_CRUISE);
+		param_set(_param_volatile,&_xy_cruise_float);
+
+		_param_volatile = param_handle(px4::params::MPC_JERK_AUTO);
+		param_set(_param_volatile,&_jerk_float);
+
+
+		_stage++;
 
 		break;
 	case 4:
-		// update _wp to 4
-		_wp = 4;
-		// WPs are line-2_top, line-2_bottom,  start, pool
-		//               4            5          6	7
-		navigate_MissionList(3);
-		// _wp is now 7
+		// update _wp to 3
+		_wp = 3;
+		// WPs are line-2, pool,
+		//          3       4
+		navigate_MissionList(1);
+		// _wp is now 4
 
 		_stage++;
 		_wait_stage = false;
 
 		break;
 	case 5:
-		//Take water
+		//Take water TODO:
 		_stage++;
 		break;
-
 	case 6:
+		// pass line1
 		_wp = 0;
-		// _wp is 0
-		// WPs are line-1_bottom, line-1_top,
-		//               0            1
-		navigate_MissionList(1);
-
+		navigate_MissionList(0);
 		_stage++;
+
 		break;
+
 	case 7:
-		//Go to detected red coordinate
+		// go to red area
+		_target_lat = _target_red_area.lat;
+		_target_lon = _target_red_area.lon;
+		do_reposition();
+		min_dist_to_target = 2.0f;
+		while(get_distance_global() > min_dist_to_target)
+		{
+			usleep(1_s);
+		}
 
 		_stage++;
-		break;
 
+		break;
 	case 8:
-		//dump water
+		// TODO:red land
 
 		_stage++;
 		break;
 
 	case 9:
-		// update _wp to 4
-		_wp = 4;
-		// WPs are line-2_top, line-2_bottom,  start
-		//               4            5          6
-		navigate_MissionList(2);
-		// _wp is now 6
+		//TODO: dump water
+
 		_stage++;
 		break;
 
 	case 10:
-		// go to end
+		// update _wp to 3 and 5 =  line2 and finish
+		_wp = 3;
+		navigate_MissionList(0);
+
+		_wp = 5;
+		navigate_MissionList(0);
 
 		_stage++;
 		break;
 
 	case 11:
+		// go to end
+
+		_stage++;
+		break;
+
+	case 12:
 		//land
 
 		if(state_nav == vehicle_status_s::NAVIGATION_STATE_AUTO_LAND)
@@ -556,20 +559,10 @@ void KusbegiControl::mission2()
 		}
 
 		break;
-	case 12:
+	case 13:
 		//done
 		//do nothing
 		break;
-
-		//Bak:
-		// sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_V,5.0f,0.0f,0.0f);
-		// usleep(10_s);
-		// print_distance_global();
-		// get_positionSetpoint();
-		// sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_X,0.0f,5.0f,0.0f);
-
-		//sendSetpoint(kusbegi_target_s::KUSBEGI_DRV_TYPE_X,0.0f,0.0f,0.0f);
-		//check if reached
 
 	default:
 		break;

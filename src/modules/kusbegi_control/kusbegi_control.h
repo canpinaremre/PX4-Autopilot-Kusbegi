@@ -75,6 +75,7 @@ private:
 	kusbegi_target_s	_kusbegi_target_s{};
 	vehicle_local_position_setpoint_s _local_pos_s{};
 	vehicle_global_position_s 	  _global_pos_s{};
+	vehicle_global_position_s 	  _target_red_area{};
 
 	kusbegi_mission_s	_cmd_mission_s{};
 	map_projection_reference_s _reference_position{}; /**< Structure used to project lat/lon setpoint into local frame. */
@@ -103,7 +104,10 @@ private:
 		(ParamFloat<px4::params::NAV_FW_ALTL_RAD>)
 		_param_custom	/**< Custom param for future use*/
 	)
-
+	float _jerk_float;
+	float _xy_cruise_float;
+	param_t _param_volatile;
+	float _param_float;
 	uint8_t _stage;
 	uint8_t _wp;
 	bool _wait_stage;
@@ -166,6 +170,8 @@ private:
 	bool _mission_active{false};
 	float _mission_alt;
 	uint8_t _active_mission = 0;
+
+	float min_dist_to_target = 3.0f;
 
 	bool get_mcu_message();
 	bool send_message_to_mcu(mcuSetState state,float fparam);

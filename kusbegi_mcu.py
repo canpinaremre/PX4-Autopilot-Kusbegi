@@ -96,20 +96,36 @@ def send_message():
     		if biggest_contour_centroid is not None:
     			cv2.circle(capture,biggest_contour_centroid,5,(255,0,0),-1)
     			x,y = biggest_contour_centroid
-			print("x: ",x)
-			print("y: ",y)
-			print("size: ",size)
 			body_right = (x - horizontal_resolution/2)
         		body_forward = (vertical_resolution/2 - y)
 			#TODO:
     			#send(body_forward,body_right,size)
+			print("x: ",x)
+			print("y: ",y)
+			print("size: ",size)
+			print("forward: ",body_forward)
+			print("right: ",body_right)
+		#TODO delete sleep and print
+		sleep(0.5)
     		cv2.imshow('capture',capture)
     		cv2.imshow('inrangepixels',inrangepixels)
 
 
 def get_message():
 	while(1):
-		print("Hello")
-		sleep(100)
 		state = vehicle.parameters['NAV_FW_ALT_RAD']
-		param = vehicle.parameters['NAV_FW_ALTL_RAD']
+		param = vehicle.parameters['NAV_FW_ALTL_RAD'] # comfirm
+
+		if((state == 1) and (param == 0)): #take water
+			#take water
+			print("take water")
+			#TODO
+
+		elif((state == 2) and (param == 0)): #dump water
+			#dump water
+			print("dump water")
+			#TODO
+		else:
+			#Secure everything
+
+		sleep(1)

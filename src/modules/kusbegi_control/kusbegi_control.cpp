@@ -859,11 +859,11 @@ int KusbegiControl::status_mission(){
 }
 
 int KusbegiControl::test_func(){
-	_phase = TAKEOFF;
-
-	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
-	uint8_t state_nav = vehicle_status_sub.get().nav_state;
-	PX4_INFO("Nav state: %d",state_nav);
+	send_message_to_mcu(MCU_DUMP_WATER,0.0f);
+	usleep(2_s);
+	send_message_to_mcu(MCU_TAKE_WATER,0.0f);
+	usleep(5_s);
+	send_message_to_mcu(MCU_STATE_IDLE,0.0f);
 
 	return 0;
 }

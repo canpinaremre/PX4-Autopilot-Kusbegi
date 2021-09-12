@@ -9,6 +9,8 @@ import cv2
 import numpy as np
 import time
 
+import RPi.GPIO as GPIO
+
 
 connection_string = "/dev/serial0"
 #connection_string = '127.0.0.1:14540'
@@ -31,6 +33,28 @@ def send(red_x,red_y,red_size):
 
 
 def get_message():
+    dumped = False
+    servoPIN1 = 16
+    servoPIN2 = 17
+    in1 = 5
+    in2 = 6
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(servoPIN1, GPIO.OUT)
+    GPIO.setup(servoPIN2, GPIO.OUT)
+    GPIO.setup(in1, GPIO.OUT)
+    GPIO.setup(in2, GPIO.OUT)
+
+    p1 = GPIO.PWM(servoPIN1, 50) # GPIO 17 for PWM with 50Hz
+    p2 = GPIO.PWM(servoPIN2, 50) # GPIO 17 for PWM with 50Hz
+
+    p1.start(3) # Initialization
+    p2.start(10) # Initialization
+    GPIO.output(in1,GPIO.LOW)
+    GPIO.output(in2,GPIO.LOW)
+
+    time.sleep(1.5)
+    p1.stop()
+    p2.stop()
     while(1):
         state = vehicle.parameters['NAV_FW_ALT_RAD']
         param = vehicle.parameters['NAV_FW_ALTL_RAD'] # comfirm
@@ -38,15 +62,31 @@ def get_message():
         if((state == 1) and (param == 0)): #take water
             #take water
             print("take water")
+            GPIO.output(in1,GPIO.LOW)
+            GPIO.output(in2,GPIO.HIGH)
             #TODO
 
         elif((state == 2) and (param == 0)): #dump water
             #dump water
             print("dump water")
+            if not (dumped):
+                p1.start(10) # Initialization
+                p2.start(3) # Initialization
+                time.sleep(1.5)
+                p1.stop()
+                p2.stop()
+                
+                dumped = True
+                p1.start(3) # Initialization
+                p2.start(10) # Initialization
+                time.sleep(1.5)
+                p1.stop()
+                p2.stop()
             #TODO
         else:
             #Secure everything
-            time.sleep(1)
+            GPIO.output(in1,GPIO.LOW)
+            GPIO.output(in2,GPIO.LOW)
             print("state:",state)
         time.sleep(1)
 
@@ -130,6 +170,6 @@ while(1):
     #cv2.imshow('capture',capture) 
     #cv2.imshow('inrangepixels',inrangepixels)
         
-    
+      
 cv2.destroyAllWindows()
 camera.release()

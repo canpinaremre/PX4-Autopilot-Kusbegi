@@ -318,10 +318,10 @@ void KusbegiControl::mission1()
 		else
 		{
 			// _wp is 2 update it to 3 and navigate from 3 to 6
-			// WPs are line-2_top, line-2_bottom,  start, finish
-			//               3            4          5	6
-			// 3 + 3 = 6 is the destination wp index
-			navigate_MissionList(3);
+			// WPs are line-2_top, line-2_bottom, finish
+			//               3            4        	5
+			// 3 + 2 = 5 is the destination wp index
+			navigate_MissionList(2);
 			// _wp is now 6. But it doesn't matter.
 			// Mission is done.
 			// Go to land.
